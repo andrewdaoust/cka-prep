@@ -1,0 +1,4 @@
+config:
+  aws:profile: andrew
+  aws:region: us-east-1
+  lfs258:key-name: lfs258-andrew

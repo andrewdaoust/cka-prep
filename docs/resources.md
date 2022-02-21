@@ -1,4 +1,8 @@
-# Resources
+---
+id: intro
+title: Kubernetes Resources
+sidebar_position: 1
+---
 
 ## Official Kubernetes documention
 
@@ -16,6 +20,7 @@
 - [_The Kubernetes Handbook_ - FreeCodeCamp](https://www.freecodecamp.org/news/the-kubernetes-handbook/)
 - [_Certified Kubernetes Administrator Study Guide – Prepare for the CKA Exam_](https://www.freecodecamp.org/news/certified-kubernetes-administrator-study-guide-cka/) - FreeCodeCamp
 - [_Learn Kubernetes in Under 3 Hours: A Detailed Guide to Orchestrating Containers_](https://www.freecodecamp.org/news/learn-kubernetes-in-under-3-hours-a-detailed-guide-to-orchestrating-containers-114ff420e882/) - FreeCodeCamp
+- [Kubernetes learning resource list](https://docs.google.com/spreadsheets/d/10NltoF_6y3mBwUzQ4bcQLQfCE1BWSgUDcJXy-Qp2JEU/htmlview)
 
 
 ## Videos
@@ -28,3 +33,9 @@
 
 - [_The Ultimate Guide to Passing the CKA Exam_](https://medium.com/@ContinoHQ/the-ultimate-guide-to-passing-the-cka-exam-1ee8c0fd44cd)
 - [_CKA Exam Study Guide: A Complete Resource For CKA Aspirants_](https://devopscube.com/cka-exam-study-guide/)
+
+
+## Misc
+
+- [Kubernetes learning resource list](https://docs.google.com/spreadsheets/d/10NltoF_6y3mBwUzQ4bcQLQfCE1BWSgUDcJXy-Qp2JEU/htmlview)
+- [Kubernetes Podcast](https://kubernetespodcast.com/) - Google
