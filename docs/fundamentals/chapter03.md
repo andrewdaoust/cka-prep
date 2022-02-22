@@ -592,10 +592,10 @@ kubectl -n kube-system delete coredns-<instance> coredns-<instance>
 ip a
 ```
 
-and you should see a new tunnel interface and more new interfaces as other pods are deployed.
+and you should see a new tunnel interface, `tunl0`, and more new interfaces as other pods are deployed.
 
 
-### 3.4 - Deploy a simple application
+### Lab 3.4 - Deploy a simple application
 
 1. Create a new `deployment`, which deploys a new container running an application and verify it is running.
 
@@ -650,3 +650,199 @@ kubectl get deployment nginx -o yaml > second.yaml
 diff first.yaml second.yaml
 ```
 
+9. Now we will learn some ways to get useful YAML and JSON output.  The first is by "creating" a deployment but use the `--dry-run` flag to just see the deployment spec. It should look very similar to the ones modified in previous steps.  Also verify that no deployment was actually created by getting the deployment and verifying only the original `nginx` deployment is there.
+
+```bash
+kubectl create deployment two --image=nginx --dry-run=client -o yaml
+kubectl get deployment
+```
+
+We can also get the YAML for an existing deployment as seen in previous steps.
+
+```bash
+kubectl get deployments nginx -o yaml
+```
+
+We can also output to JSON.
+
+```bash
+kubectl get deployments nginx -o json
+```
+
+10. Now back to our `nginx` deployment.  To be able to talk to the web server from external points of the cluster we need to create a `service`.  First look at the help page for the `expose` command. Notice some of the examples in the help field.
+
+```bash
+kubectl expose -h
+```
+
+Try to gain access to the server but notice it will fail since a port was not given.
+
+```bash
+kubectl expose deployment/nginx
+```
+
+11. Now update the deployment container spec in the YAML file with the port information.
+
+```bash
+vim first.yaml
+```
+
+and add the following fields under the `spec.template.spec.containers` section of the file.
+
+```yaml
+ports:
+- containerPort: 80
+  protocol: TCP
+```
+
+There are a few subcommands that will update the configuration. `apply`, `edit`, and `path` all do it non-disruptively.
+
+`apply` does a 3-way diff on the previous, current, and supplied input to determine wwhat changes to make.  Fields that are not metioned will not be touched.
+
+`edit` gets the current configuration, opens an editor, and then runs an `apply` on the made chnages.
+
+`patch` can be used to update API objects in place.
+
+For changes that cannot be made once te object is initialized, `replace` can be used which will destroy the object and recreate it.  For the `nginx` deployment we must do this.
+
+```bash
+kubectl replace -f first.yaml
+```
+
+Then check to make sure the deployment and pod status show that they are ready.
+
+```bash
+kubectl get deploy,pod
+```
+
+12. Now tyry to expose the web server again.
+
+```bash
+kubectl expose deployment/nginx
+```
+
+Then check the service and endpoint information.  Take note of the `ClusterIP` (provided by Calico) in the service information and the `Endpoint` in the endpoint information to use for later.
+
+```bash
+kubectl get svc nginx
+
+kubectl get ep nginx
+```
+
+10.96.14.131
+192.168.157.133:80
+
+13. Determine which node the container is running on.  Log into that node and run a `tcpdump` (this may need to be installed) to see the traffic on `tunl0`.  While the `tcpdump` is still running use `cutl` to send an HTTP request.
+
+On the __cp node__:
+
+```bash
+kubectl describe pod nginx-<specific deployment> | grep Node:
+```
+
+On the node that is running the pod (in my case thw worker node):
+
+```bash
+sudo tcpdump -i tunl0
+```
+
+Now `curl` the `ClusterIP` on port `80` and also try to `curl` the `Endpoint`. You should get the same response.
+
+```bash
+curl <ClusterIP>:80
+curl <Endpoint>
+```
+
+14. Now scale the deployment to three web servers.
+
+```bash
+kubectl get deployment
+
+kubectl scale deployment nginx --replicas=3
+
+kubectl get deployment nginx
+```
+
+![scaled deployment](./img/ch03-lab-scale-deployment.png)
+
+14. Now look at the endpoints again. There should now be three.
+
+```bash
+kubectl get ep nginx
+```
+
+Now find the oldest deployment running and deleteit so that it is recreated.
+
+```bash
+kubectl get pod -o wide
+kubectl delete pod nginx-<specific deployment> 
+```
+
+Then confirm the new pod is running. You should see one that is newer than the other two.
+
+```bash
+kubectl get po
+```
+
+If you view the endpoints again you will notice the original IP is no longer in use. Try to `curl` the `ClusterIP` and any of the `Endpoints` again. You should still have access to the cluster.  Access is only available within the cluster though.  Once doe you can stop the `tcpdump` with `ctrl-C`.
+
+
+### Lab 3.5 - Access from outside the cluster
+
+Access to the cluster from external sources can be configured using Services with a DNS-addon or environment variables.  We'll use environment variables.
+
+1. Gt this list of pods and then `exec` into on to print the environment variables with `printenv`.
+
+```bash
+kubectl get po
+
+kubectl exec nginx-<specific deployment> -- printenv | grep KUBERNETES
+```
+
+2. Find the existing service for `nginx` and delete it.
+
+```bash
+kubectl get svc
+
+kubectl delete svc nginx
+```
+
+3. Now create the service again, but this time as type `LoadBalancer`.
+
+```bash
+kubectl expose deployment nginx --type=LoadBalancer
+
+kubectl get svc
+```
+
+Note the `EXTERNAL_IP` will be pending until a provider responds with a load balancer.
+
+4. Now on your local machine, in the browser, type the public IP of the node and the port given for the service in the previous step.  You should get the nginx welcome page.
+
+5. Now scale down the replicas to zero and confirm they are all down.
+
+```bash
+kubectl scale deployment nginx --replicas=0
+
+kubectl get po
+```
+
+Access to the web server should fail now. Scale back up to two replicas and try again, the web server should be working.
+
+6. Now delete the deployment to recover the system resources.  Note that the service and endpoints need to also be deleted.
+
+```bash
+kubectl delete deployments nginx
+
+kubectl delete ep nginx
+
+kubectl delete svc nginx
+```
+
+
+## Knowledge check
+
+- `kubeadm` is used to __create a cluster and add nodes__
+- The main binary for working withobject of a Kubernetes cluster is __`kubectl`__
+- There can be __1__ pod network per cluster
+- The `~/.kube/config` file contains __endpoints__, __SSL keys__, and __contexts__.
