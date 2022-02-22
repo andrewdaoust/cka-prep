@@ -491,3 +491,162 @@ sudo kubeadm config print init-defaults
 
 ### Lab 3.2 - Grow the cluster
 
+1. SSH into the worker node and use the same process as the cp node to get all the software installed on the worker node. This is steps 1 and 3-9 in the [previous section](#lab-31---install-kubernetes).
+
+2. Find your IP address for the __cp node__.  Reminder that you can do this again with `hostname -i`.
+
+3. Next we want to join the cp node and the worker.  Remember that the join command is printed in the console but this command only works for 2 hours until it expires, so in the future we will need to generate our own.  To do this:
+
+```bash
+sudo kubeadm token create
+```
+
+And then to list the token run:
+
+```bash
+sudo kubeadm token list
+```
+
+4. Create a Discovery Token CA Cert Hash on the __cp__ to make sure there is a secure connection between it and the worker node.
+
+```bash
+openssl x509 -pubkey \
+    -in /etc/kubernetes/pki/ca.crt | openssl rsa \
+    -pubin -outform der 2>/dev/null | openssl dgst \
+    -sha256 -hex | sed's/ˆ.* //'
+```
+
+openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/ˆ.* //'
+
+5. On the __worker__ node add a hostname alias for the __cp__ name like we did originally on the cp node in the previous lab, with the alias `k8scp`.
+
+```bash
+vim /etc/hosts
+```
+
+6. Next we can join the __worker__/__second__ node to the __cp__.  We will use the token and the hash (a `sha256`) to join them.  The `kube init` would have an example of this to use if within 2 hours of running the command. Otherwise, we would build the command from the token and hash we just created. We'll also use the hostname alias we setup and port `6443`.
+
+```bash
+kubeadm join \
+    --token <token> \
+    k8scp:6443 \
+    --discovery-token-ca-cert-hash sha256:<hash>
+```
+
+You can check this worked by running 
+
+```bash
+kubectl get nodes
+```
+
+on the __cp__ node.  
+
+7. Now exit root on the __worker__ node and try to run kubectl to get the nodes. It should fail because there is no local configuration to access the cluster.
+
+```bash
+exit
+kubectl get nodes
+ls -l .kube
+```
+
+The second like should fail due to the lack of configuration and the 3rd should fail due to the file not existing.
+
+
+### Lab 3.3 - Finish cluster setup
+
+1. View available nodes of the cluster.  On the __cp__ node run
+
+```bash
+kubectl get nodes
+```
+
+2. Look at the details on the __cp__ node. Notice that `Taints`. The cp does not run non-infrastructure pods by default for secirity and resource contention.
+
+```bash
+kubectl describe node k8scp
+```
+
+3. Enable non-infrastructure pods to run. For training we allow usage of the node but this can be skipped when setting up for a production environment.
+
+```bash
+kubectl describe node | grep -i taint
+
+kubectl taint nodes --all node-role.kubernetes.io/master-
+```
+
+4. Determine if the DNS and Calico pods are ready for use.
+
+```bash
+kubectl get pods --all-namespaces
+```
+
+If the CoreDNS pods seem to be getting stuck you may need to delete them to force them to be recreated.
+
+```bash
+kubectl -n kube-system delete coredns-<instance> coredns-<instance>
+```
+
+5. Once this finishes, run 
+
+```bash
+ip a
+```
+
+and you should see a new tunnel interface and more new interfaces as other pods are deployed.
+
+
+### 3.4 - Deploy a simple application
+
+1. Create a new `deployment`, which deploys a new container running an application and verify it is running.
+
+```bash
+kubectl create deployment nginx --image=nginx
+kubectl get deployments
+```
+
+2. View the details of the deployment
+
+```bash
+kubectl describe deployment nginx
+```
+
+3. View the basic steps the cluster made to create the deployment
+
+```bash
+kubectl get events
+```
+
+4. Get the description of the deployment in YAML format and notice, about halfway down in the output is the current status of the deployment.
+
+```bash
+kubectl get deployment nginx -o yaml
+```
+
+5. Run the command but pipe the output to a file. Then edit the file and remove `creationTimestamp`,`resourceVersion`, and `uid` sections. Also remove everything from `status` down.
+
+```bash
+kubectl get deployment nginx -o yaml > first.yaml
+
+vim first.yaml
+```
+
+6. Delete the existing deployment
+
+```bash
+kubectl delete deployment nginx
+```
+
+7. Recreate the deployment, this time with our edited YAML file.
+
+```bash
+kubectl create -f first.yaml
+```
+
+8. Get the output of this deployment and compare it to the first.
+
+```bash
+kubectl get deployment nginx -o yaml > second.yaml
+
+diff first.yaml second.yaml
+```
+

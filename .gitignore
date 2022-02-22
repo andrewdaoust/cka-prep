@@ -23,3 +23,6 @@ yarn-error.log*
 
 join-cp.sh
 join-worker.sh
+
+.vscode/
+.idea/
