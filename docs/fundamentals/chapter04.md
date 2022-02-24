@@ -13,7 +13,7 @@ title: Kubernetes Architecture
 - Study kubelet local agent
 - Learn how controllers manage the cluster state
 - Learn what a Pod is to the cluster
-- Leanr more about the network configuration of the cluster
+- Learn more about the network configuration of the cluster
 - Discuss Kubernetes services
 
 
