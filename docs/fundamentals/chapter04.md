@@ -19,3 +19,12 @@ title: Kubernetes Architecture
 
 ### Main components
 
+- Control plane and worker nodes
+- Operators
+- Services
+- Pods and containers
+- Namespaces and quotas
+- Network and policies
+- Storage
+
+![Kubernetes architecture](./img/ch02-architecture.png)
