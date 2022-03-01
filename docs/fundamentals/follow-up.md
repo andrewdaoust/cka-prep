@@ -30,6 +30,10 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [b+tree](chapter04.md#etcd-database)
 - [in-tree deployment](chapter04.md#other-agents)
 - [out-of-tree deployment](chapter04.md#other-agents)
+- [iptables](chapter04.md#worker-nodes)
+- [ipvs](chapter04.md#worker-nodes)
+- [supervisord](chapter04.md#worker-nodes)
+- [NUMA](chapter04.md#kubelet)
 
 
 ## Additional

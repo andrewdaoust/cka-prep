@@ -75,3 +75,28 @@ Depending on the networking plugin, there could be varous pods to handle network
 
 ### Worker nodes
 
+All the nodes run the kubelet and kube-proxy as well as a container engine.  Other management daemons watch these agents or enhance functionality for services not yet included by Kubernetes.
+
+The kubelet interacts with the container engine and makes sure the containers that should be running are.  The kube-proxy handles all the networking to the containers using iptable entries.  The kube-proxy also has a userspace mode to monitor Services and Endpoints using a random port to proxy any traffic using ipvs. Depnding on the network plugin chosen, you may also see pods for the plugin.
+
+Each node could run in a different engine and it is likely that Kubernetes will support more container runtimes as it continues to mature.
+
+While not part of a typicall installation, some users will user supervisord to monitor the kubelet and docker processes and restart them in they fail and log events.  Kuberentes does not yet have cluster-wide logging, and instead the CNCF project [Fluentd](https://www.fluentd.org/) is used, which when implement correctly, gives a logging layer for the cluster which can filter, buffer, and route messages.
+
+Metric on a cluster-wide scale is another lacking area of Kubernetes.  There is a metrics-server SIG which gives basic functionality to collect CPU and memory utilization of a node or pod.  For more complete metrics, many use the [Prometheus](https://prometheus.io/) project.
+
+
+### Kubelet
+
+The kubelet systemd process accepts the API calls for Pod specification (known as a `PodSpec` which is a JOSN or YAML file that describes a pod) and works to configure the local node to meet the specification.  The kublet is also responsible for the following:
+
+- Mounting volumes to Pod
+- Downloading secrots
+- Passing requests to local continaer engine
+- Repoting Pod and node status to cluster
+
+The kubelet also calls other components like the Topology Manager, whih uses _hints_ to conifigure topology-aware resource NUMA assignments for CPU and hardware acceleration. This is off by default as it is an alpha feature.
+
+
+### Operators
+
