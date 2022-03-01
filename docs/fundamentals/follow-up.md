@@ -25,6 +25,13 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [GPG keys](./chapter03.md#lab-31-install-kubernetes)
 
 
+## Chapter 4
+
+- [b+tree](chapter04.md#etcd-database)
+- [in-tree deployment](chapter04.md#other-agents)
+- [out-of-tree deployment](chapter04.md#other-agents)
+
+
 ## Additional
 
 - CIDR
