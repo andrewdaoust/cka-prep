@@ -34,6 +34,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [ipvs](chapter04.md#worker-nodes)
 - [supervisord](chapter04.md#worker-nodes)
 - [NUMA](chapter04.md#kubelet)
+- [DeltFIFO queue](chapter04.md#operators)
+- [Golang work queues](chapter04.md#operators)
 
 
 ## Additional

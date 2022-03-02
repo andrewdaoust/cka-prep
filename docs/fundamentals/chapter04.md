@@ -100,3 +100,30 @@ The kubelet also calls other components like the Topology Manager, whih uses _hi
 
 ### Operators
 
+Operators (also known as controllers or watch-loops) as important concepts for orchestration.  Kubernetes has many that come with it, and it can be extedned with custom operators. Operators work as two parts, an _Informer_ and a downstream store in the form of a DeltaFIFO queue.  The loop process recieves an `obj` (object) comprised of an array of deltas from the queue. The operator's logic then creates/modifies some object until it matches the specification, as long as the delta is not a `Deleted` type.
+
+The Informer calls on the API server to request the object state and the data is then cached to minimize transactions to the API.  There is also a _SharedInformer_ for objects used by multiple others which creates a shared cache fo multiple request.
+
+There is also a _Workqueue_ which takes keys to had out tasks to workers.  They use standard Goland work queues (rate limiting, delayed, and time queue) typically.
+
+The `endpoints`, `namespace`, and `serviceaccounts` operators each manges the Pod resources thay are named after.  
+
+Deployments manage replicaSets. replicaSets manage Pods that share the same podSpec.  Each Pod managed by a replicaSet is called a replica.
+
+
+### Service operators
+
+A _service_ is a operator which listens to the _endpoint_ operator to provide a persistent IP for a Pod.  This is needed due to the decoupling of objects and agents which allows for flexible connection of resources and reconnection on replacement.
+
+The service operator sensd messages via the kube-apiserver to the kube-proxy of each node and also to the netowkr plugin.
+
+Services also handle access policies for inbound requests which help contro resources and security.
+
+The key take aways on services are:
+- Connects Pods
+- Exposes Pods to Internet
+- Decouples settings
+- Defines access policies for Pods
+
+
+### Pods
