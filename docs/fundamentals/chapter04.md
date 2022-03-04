@@ -141,3 +141,44 @@ One of the most common cases for having more than one container in a Pod is for 
 
 
 ### Rewrite legacy applications
+
+It can be costly to move legacy applications to work as containerized, decoupled microservices.  Can the application be containerized as is or does it need to be rewritten?  Here's some of the challanges of legacy infrastructure and disgn practices and how cloud native design patterns help solve these problems
+
+#### High replacement costs
+
+With Kubernetes, here is a low cost to replace broken components since by its nature, it is designed to be decoupled.  When comparing to legacy, this can be more of a challange to fix a small issue with a monolithic application as the whole pplication will likely need to be updated to update the one problem area.
+
+#### Large outage effect
+
+In a legacy monolithic system, an issue with one area can bring down the whole application, while with Kubernetes decoupled and transient architecture, and outage with one microservice will not affect the entire app (depending on application and the function of the microservice experiencing the outage)
+
+#### Lack of flexibility
+
+If you are experienceing loads and need to scale resources this will affect the entire application for monolithicly designed software. This is in contrast to Kubernetes, where if just one area needs to be scaled this can be done by just updating the replicaSet to manage more replicas.
+
+With a monolithic application you are also limited to running one version unless you want to dedicate the resources to run an entirely new version.  Using Kubernetes you could run different versions of specific components of your application which give the application much more flexibility.
+
+
+### Containers
+
+While we cannot manipulate container directly with Kubernetes we do have control over their resources. In the PodSpec you can pass parameters to controll the resources that container may use.
+
+An example
+
+```yaml
+resources:
+  limits: 
+    cpu: "1"
+    memory: "4Gi" 
+  requests:
+    cpu: "0.5"
+    memory: "500Mi"
+```
+
+Resourcing can also be controlled using a _ResourceQuota_ object to set hard and sot limits in a namespace.  The ResourceQuota object allows management of more than just CPU and memory and can apply to several object.
+
+As a beta feature in v1.12, the _scopeSelector_ field in the quota spec to run a pod at a specific priority if it has the appropriate _priorityClassName_ in the PodSpec.
+
+
+### Init containers
+
