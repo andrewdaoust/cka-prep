@@ -36,6 +36,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [NUMA](chapter04.md#kubelet)
 - [DeltFIFO queue](chapter04.md#operators)
 - [Golang work queues](chapter04.md#operators)
+- [IPC](chapter04.md#pods)
+- [loopback interface](chapter04.md#pods)
 
 
 ## Additional

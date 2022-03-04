@@ -127,3 +127,17 @@ The key take aways on services are:
 
 
 ### Pods
+
+While point of Kubernetes is to orchestrate containers, the smallest unit we deal with is a Pod. Pods can contain multiple containers and due to sharing resources, the Pod is designed to run a one-process-per-container architecture.
+
+- Pod of whales (to stick with the Docker theme)
+- Peas in a pod
+
+The containers of the Pod start up in parallel and there is not a way to determine which becomes available first. Using `InitContainers` can order their startup to some extent.  To support the single process running in a container, the other containers may handle logging, proxies, or special adapters.
+
+Most network plugins give the Pod one IP to share across the containers. For the containers to talk to one another they must do so via IPC, the loopback interface, or with a shared file system.
+
+One of the most common cases for having more than one container in a Pod is for logging.  This would be an example of a _sidecar_ container, which is dedicated to performing a helper task.
+
+
+### Rewrite legacy applications
