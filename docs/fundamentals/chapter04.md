@@ -207,3 +207,33 @@ Other options to determine startup order are _LivenessProbes_, _ReadinessProbes_
 
 ### Component review
 
+Now that we have an understanding of the components that make up Kubernetes, lets review the architecture again.
+
+![kubernetes architecture review](./img/ch04-k8s-architecture-review.png)
+
+We can see that all the components talk to the kube-apiserver, and only it will talk to the etcd database.
+
+In green, we can also see some commands that will help interact some of the other components.
+
+Specifically there is the `etcdctl` command to work with etcd directly, and the `calicoctl` command to get networking information from Calico. The primary Calico component on each node also has a daemon, called Felix. It is responsible for monitoring and managing the network interface, route programming, ACL configuration and state reporting.
+
+On the diagram is also __BIRD__, which is a dynamic IP routing daemon that is utilized by Felix. It reads the state of the routing and distributes it to the other nodes of the cluster. This allows a client to connect to any node and eventually the desired container's workload even when it is not the original node contacted.
+
+
+### API call flow
+
+Imagine a scenario where you want to create a new deployment on the Kubernetes cluster.  To do this maybe you run something like, 'kubectl create deploy test1 --image=httpd`. This request goes to the kube-apiserver and the API calls on etcd to persist the request.  
+
+The kube-controller-manager then requests the kube-apiserver to see if there has been any change in the spec.  In this case, there has been a change because of the request coming in. The kube-apiserver then responds back to the kube-controller-manager with the new spec. Now the kube-controller-mamnger requests the status of this spec to see if it even exists. The kube-apiserver responds with information saying the deployment does not exist so the kube-controller-manager requests the kube-apiserver to create it. The kube-apiserver creates the spec and persists the information into etcd.
+
+Then the same process to create the deployment is repeated to create the replicaSet. Then the prcoess again repeats to determine the existence of a Pod.
+
+Once the pod is created and its state is persisted into etcd, the kube-apiserver calls on the kube-scheduler to determine which node will recieve this new podSpec. The kube-scheduler is always requesting information on the states of the worker nodes that is supplied by the kubelets. Once the scheduler has the information it needs, it responds with the information on whcih node the Pod should be sent to. The kube-apiserver then sends the information to the kubelet of that node the scheduler picked.
+
+Networking information is sent to each of the kube-proxies by the kube-apiserver for each node so that each node (cp or worker) knows of this new networking configuration.
+
+Finally the kubelet downloads all the config maps and secrets, and mounts any storage needed. Once the resources are available, the kubelet sends a request to the local container engine to create the Pod. The engine then returns the information to the kubelet, which in turns responds back to the kube-apiserver, which then persists the information to etcd.
+
+
+### Node
+

@@ -41,6 +41,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [LivenessProbes](./chapter04.md#init-containers)
 - [ReadinessProbes](./chapter04.md#init-containers)
 - [StatefulSets](./chapter04.md#init-containers)
+- [Route programming](./chapter04.md#component-review)
+- [Access control list (ACL)](./chapter04.md#component-review)
 
 
 ## Additional
