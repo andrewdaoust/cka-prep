@@ -27,17 +27,20 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 
 ## Chapter 4
 
-- [b+tree](chapter04.md#etcd-database)
-- [in-tree deployment](chapter04.md#other-agents)
-- [out-of-tree deployment](chapter04.md#other-agents)
-- [iptables](chapter04.md#worker-nodes)
-- [ipvs](chapter04.md#worker-nodes)
-- [supervisord](chapter04.md#worker-nodes)
-- [NUMA](chapter04.md#kubelet)
-- [DeltFIFO queue](chapter04.md#operators)
-- [Golang work queues](chapter04.md#operators)
-- [IPC](chapter04.md#pods)
-- [loopback interface](chapter04.md#pods)
+- [b+tree](./chapter04.md#etcd-database)
+- [in-tree deployment](./chapter04.md#other-agents)
+- [out-of-tree deployment](./chapter04.md#other-agents)
+- [iptables](./chapter04.md#worker-nodes)
+- [ipvs](./chapter04.md#worker-nodes)
+- [supervisord](./chapter04.md#worker-nodes)
+- [NUMA](./chapter04.md#kubelet)
+- [DeltFIFO queue](./chapter04.md#operators)
+- [Golang work queues](./chapter04.md#operators)
+- [IPC](./chapter04.md#pods)
+- [loopback interface](./chapter04.md#pods)
+- [LivenessProbes](./chapter04.md#init-containers)
+- [ReadinessProbes](./chapter04.md#init-containers)
+- [StatefulSets](./chapter04.md#init-containers)
 
 
 ## Additional

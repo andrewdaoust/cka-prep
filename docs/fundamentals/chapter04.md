@@ -182,3 +182,28 @@ As a beta feature in v1.12, the _scopeSelector_ field in the quota spec to run a
 
 ### Init containers
 
+An __init container__ can be used to help order the startup of containers in a Pod. Init container must complete before any app containers can run, and will continue to restart until it completes if it fails.
+
+They can have different settings for use of storage and security, and therefore utility commands can be used which the app would not be allowed to. They can also contain code or utilities the app does not.
+
+:::important TODO
+What would be a good example for the use case of an init container
+:::
+
+Here is an example of the definition of an `initContainer` that requires the `ls` command to succeed before starting a database.
+
+```yaml
+spec:
+  containers:
+  - name: main-app
+    image: databaseD 
+  initContainers:
+  - name: wait-database
+    image: busybox
+    command: ['sh', '-c', 'until ls /db/dir ; do sleep 5; done; ']
+```
+
+Other options to determine startup order are _LivenessProbes_, _ReadinessProbes_, and _StatefulSets_ but they add complexity.
+
+### Component review
+
