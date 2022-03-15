@@ -237,3 +237,57 @@ Finally the kubelet downloads all the config maps and secrets, and mounts any st
 
 ### Node
 
+A node is an API object that represents a machine instance.  The instance is created outside the cluster, has the necessary software installed, and then has its information ingested to the kube-apiserver to created the API object so the cluster can communicate with the new node.
+
+Control plane nodes must be running on Linux instances, while worker nodes can also run on Windows Server 2019.
+
+Currently, cp nodes can be created with `kubeadm init` and worker nodes joined with `kubeadm join`.  The future of `kubeadm` promises features of being able to join secondary cp nodes or etcd nodes as well. There are other tools available to provision nodes of a cluster as well.
+
+When the kube=apiserver cannot communicate with the kubelet of a node for over 5 minutes, the default `NodeLease` schedules the node to be deleted and the `NodeStatus` will no longer be "ready". Pods are evicted once connection to the cluster via the kube-apiserver is re-established. The cluster does not forcibly remove and reschedule them.
+
+The node objects exist in the `kube-node-lease` namespace.  Nodes can be removed with
+
+```bash
+kubectl delete node <node-name>
+```
+
+This will remove the node from the kube-apiserver and cause the pods to evacuate.  Running `kubeadm reset` then removes the cluster specific information.  Removing iptables may be necessary as well if the node is to be re-used.
+
+Running 
+
+```bash
+kubectl describe node <node-name>
+```
+
+will let you check the CPU usage, memory usage, requests, limits, capcity, pods allowed, current pods, among a few other things.
+
+
+### Single IP per pod
+
+![pod networking](./img/ch04-pod.png)
+
+The image shows an example of a pod with two volumes, 1 and 2, and three containers, A, B, and the _pause container_. This pause container is used to get the an IP address and to share this network namespace with the other containers within the pod.
+
+For the pods to communicate with one another they can use
+- the loopback interface
+- file writes to a common file system
+- interprocess communication (IPC)
+
+There is also a network plugin from HPE Labs that allows for multiple IPs per pod but this has not been adopted elsewhere.
+
+Starting as an alpha feature from v1.16 you can use IPv4 or IPv6 for pods and services.  Current versions require creating the network for each address family separately when creating a service.
+
+
+### Container to outside path
+
+![container external facing IP](./img/ch04-container-ip.png)
+
+In this example the two container share an IP address and a namespace. These are configured by kubectl working with the kube-proxy.  The IP is assigned to the pod before the containers are started and inserted into them on start up. The container has an interfact like `eth0@tun10`, and the IP is set for the pod's life.
+
+The endpoint is created at the same time as the service. Notice that the endpoint is the pod IP with a port number.  The service connects the network traffic from a high number port to the endpoint using iptables along with ipvs.
+
+The kube-controller-manager's watch loops monitors the need for creating or deleting any services and endpoints.
+
+
+### Services
+

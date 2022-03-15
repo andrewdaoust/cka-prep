@@ -43,6 +43,9 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [StatefulSets](./chapter04.md#init-containers)
 - [Route programming](./chapter04.md#component-review)
 - [Access control list (ACL)](./chapter04.md#component-review)
+- [`NodeLease`](./chapter04.md#node)
+- [Loopback interface](./chapter04.md#single-ip-per-pod)
+- [Interprocess communication (IPC)](./chapter04.md#single-ip-per-pod)
 
 
 ## Additional
