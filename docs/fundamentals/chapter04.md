@@ -291,3 +291,73 @@ The kube-controller-manager's watch loops monitors the need for creating or dele
 
 ### Services
 
+Services are used to connect Pods to one another or to external traffic.
+
+![service diagram](./img/ch04-services.png)
+
+In the example, there is a primary and sidecar container, App and Logger respectively.  There is also the pause container that reserves the IP address in the namespace.  This container isn't seen within Kubernetes, but you could view it using `docker` or `crictl`.  We also see some ClusterIPs, used to connect to either a NodePort for outside the cluster, an IngressController or proxy, or to connect to another "backend" pod.
+
+
+### Networking setup
+
+From a networking perspective, each pod can be treated as a virtual machine of physical hosts.  The network must assign an IP to each Pod and provide routes between all Pods on any nodes.
+
+There are three main networking challenges in a container orchestration system:
+
+- Coupled container-to-container communications (solved with Pod concept)
+- Pod-to-pod communication
+- External-to-pod communication (solved by services concept)
+
+Kubernetes, then expects the networking configuration to handle the pod-to-pod is available, it will no do it for you.
+
+Detailed explaination of the Kubernetes networking model can be found [here](https://kubernetes.io/docs/concepts/cluster-administration/networking/) in the official docs.
+
+One of the lead developers of Kubernetes has also created [this useful description](https://speakerdeck.com/thockin/illustrated-guide-to-kubernetes-networking) of Kubernetes networking.
+
+
+### CNI network configuration file
+
+To provide networking, Kubernetes has begun standardizing on the Container Networking Interface (CNI) spec. Since v1.6.0, `kubeadm`'s goal was to use CNI.
+
+CNI is an emerging spec with libraries that allow plug-ins to be written to container networking and remove allocated resources when containers are deleted.  CNI is language agnostic and provides a common interface for various networking solutions and container runtimes.  There are many plugins such as ones from Amazon ECS, SR-IOV, Cloud Foundry, and many more.  With CNI you can write network configuration files:
+
+```json
+{
+  "cniVersion": "0.2.0",
+  "name": "mynet",
+  "type": "bridge",
+  "bridge": "cni0",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.22.0.0/16",
+    "routes": [
+      { "dst": "0.0.0.0/0" }
+    ]
+  }
+}
+```
+
+The example configuration file creates a standard Linux bridge named `cni0` which will give out IP address in the subnet `10.22.0.0/16`. This bridge plug-in will configure network interfaces in the correct namespaces so that the container network is defined properly.
+
+More info can be found in the [CNI Github repo](https://github.com/containernetworking/cni) `README`.
+
+
+### Pod-to-pod communication
+
+The CNI can be used to configure the network of a pod and provide a single IP address. It does not address the issue of pod-to-pod communication though.
+
+Kubernetes requires the following:
+
+- All pods can communicate with one another across all nodes
+- All nodes can communicate with all pods
+- No network address translation (NAT)
+
+Basically all IP (nodes and Pods) are routable without NAT. This is achievable at the physical network infrastructure level when you have access to is (e.g with GKE), or via a software defined overlay like many of the networking interfaces previously dicussed (Weave, Flannel, Calico, Romana, etc).
+
+[These Kubernetes docs](https://kubernetes.io/docs/concepts/cluster-administration/networking/) or this [list](https://kubernetes.io/docs/concepts/cluster-administration/addons/) provide a more complete list.
+
+
+### Mesos
+

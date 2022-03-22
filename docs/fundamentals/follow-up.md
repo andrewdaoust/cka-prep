@@ -46,6 +46,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [`NodeLease`](./chapter04.md#node)
 - [Loopback interface](./chapter04.md#single-ip-per-pod)
 - [Interprocess communication (IPC)](./chapter04.md#single-ip-per-pod)
+- [Subnet](./chapter04.md#cni-network-configuration-file)
+- [Network address translation (NAT)](./chapter04.md#pod-to-pod-communication)
 
 
 ## Additional
