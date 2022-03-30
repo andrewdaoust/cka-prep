@@ -361,3 +361,24 @@ Basically all IP (nodes and Pods) are routable without NAT. This is achievable a
 
 ### Mesos
 
+At a high level, there is not much difference between Kubernetes and other clustered orchestration systems.
+
+Most have some sort of central managerthat exposes an API, something to schedule and place workloads on cluster nodes, and some persistent layer for the cluster state.
+
+For example, here is a comparison of Kubernetes and Mesos.
+
+![Mesos architecture](./img/ch04-mesos-architecture.jpg)
+
+Overall the architecture is similar, just different technologies might be used for different components.  In Mesos, the persistence layer is implemented with Zookeeper, while Kubernetes uses etcd.
+
+Similar comparisons could be made for systems like OpenStack or CloudStack.
+
+Kubernetes sets itself apart with features targetting fault-tolerance, self-discovery, and scaling. It is also differentiated with it purely API-driven mindset.
+
+
+## Lab Exercises
+
+### Lab 4.1 - Basic node maintenance
+
+This lab focuses on backip up etcd and updating the Kubernetes version on the cp and worker nodes.
+
