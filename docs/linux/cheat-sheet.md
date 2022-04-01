@@ -26,3 +26,10 @@ or to filter down to certain naming values
 ```bash
 printenv | grep <filter text>
 ```
+
+## Install a binary
+
+```bash
+chomd +x <binary to install>
+mv <binary to install> /usr/local/bin
+```

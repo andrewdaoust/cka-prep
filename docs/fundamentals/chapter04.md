@@ -380,5 +380,5 @@ Kubernetes sets itself apart with features targetting fault-tolerance, self-disc
 
 ### Lab 4.1 - Basic node maintenance
 
-This lab focuses on backip up etcd and updating the Kubernetes version on the cp and worker nodes.
+This lab focuses on backing up etcd and updating the Kubernetes version on the cp and worker nodes.
 
