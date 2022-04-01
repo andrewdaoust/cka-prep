@@ -382,3 +382,215 @@ Kubernetes sets itself apart with features targetting fault-tolerance, self-disc
 
 This lab focuses on backing up etcd and updating the Kubernetes version on the cp and worker nodes.
 
+#### Back up etcd
+
+The upgrade process for Kubernetes has become more stable but it is still good practice to backup the lcuster state before trying to back it up. There are many tools for managing and backing up etcd, and each has a distinct process for backing up and restoring. We'll use the included `snapshot` command for `etcdctl`. All the following commands in this section should be run on the cp node.
+
+1. Find the data directory for the etcd daemon, which can be found in the manifest.
+
+```bash
+sudo grep data-dir /etc/kubernetes/manifests/etcd.yaml
+```
+
+The response should be something like this:
+
+```yaml
+    - --data-dir=/var/lib/etcd
+```
+
+2. Log into the etcd container
+
+```bash
+kubectl -n kube-system exec -it etcd-<Tab> -- sh
+```
+
+This will open up a shell on the container.  Now have a look at the commands etcdctl offers with 
+
+```bash
+etcdctl -h
+```
+
+For TLS to work some files need to be passed to etcdctl. The etcd image is fairly minimal so many useful commands are not available.  To find the necessary files, it is important to remember the path __`/etc/kubernetes/pki/etcd`__.  `cd` to this location and list the files with `echo` since `ls` will not be available.
+
+```bash
+cd /etc/kubernetes/pki/etcd
+echo *
+```
+
+You should get a response similar to this from `echo *`
+
+```bash
+ca.crt ca.key healthcheck-client.crt healthcheck-client.keypeer.crt peer.key server.crt server.key
+```
+
+You can avoid having to type out each of these keys, especially in a limited shell environment using environment parameters. Log out with `exit` and pass the paths as necessary. An example is in the next step.
+
+3. Check database health with the loopback IP on port `2379`. This will need the peer cert and key and the certificate authority as environemtn variables.
+
+```bash
+kubectl -n kube-system exec -it etcd-<Tab> -- sh \
+  -c "ETCDCTL_API=3 \
+  ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.crt \
+  ETCDCTL_CERT=/etc/kubernetes/pki/etcd/server.crt \
+  ETCDCTL_KEY=/etc/kubernetes/pki/etcd/server.key \
+  etcdctl endpoint health"
+```
+
+You should get a response like this
+
+```bash
+127.0.0.1:2379 is healthy: successfully committed proposal: took = 14.813924ms
+```
+
+Before continueing to the next step, let's break down the command we just used.  First is the `kubectl -n kube-system exec -it etcd-<Tab> -- sh` part, which like the step before is used to open a shell in the container. On the next line is the `-c` flag which is used with `sh` to tell it to execute the following command. The command comes next, which is wrapped in the double quotes. First, we specify our environment variables:
+
+- `ETCDCTL_API` to specify the API version to use
+- `ETCDCTL_CACERT` to specify the path to the certificate authority
+- `ETCDCTL_CERT` to specify the path to the peer cert
+- `ETCDCTL_KEY` to specify the path to the peer key
+
+The last part is the actual command to check the health, which is `etcdctl endpoint health`.
+
+4. Determine the number of databases hat are part of the cluster. 3 and 5 are common in production clusters to meet 50%+1 for quorum.  For the leanring environment, there will be only one.
+
+```bash
+kubectl -n kube-system exec -it etcd-ip-<Tab> -- sh \
+  -c "ETCDCTL_API=3 ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.crt \
+  ETCDCTL_CERT=/etc/kubernetes/pki/etcd/server.crt \
+  ETCDCTL_KEY=/etc/kubernetes/pki/etcd/server.key \
+  etcdctl --endpoints=https://127.0.0.1:2379 member list"
+```
+
+You should get a response like this:
+
+```bash
+d4e6be3f3fdd0375, started, <hostname>, https://<host IP>:2380, https://<host IP>:2379, false
+```
+
+By appending `-w table` to the previous command you can also view this information in a table.
+
+```bash
++------------------+---------+-----------------+---------------------------+---------------------------+------------+
+|        ID        | STATUS  |      NAME       |        PEER ADDRS         |       CLIENT ADDRS        | IS LEARNER |
++------------------+---------+-----------------+---------------------------+---------------------------+------------+
+| d4e6be3f3fdd0375 | started |   <hostname>    |  https://<host IP>:2380   |  https://<host IP>:2379   |      false |
++------------------+---------+-----------------+---------------------------+---------------------------+------------+
+```
+
+5. After figuring out the number of databases and the health we can back up etcd.  We'll use the `snapshot` argument to save the file to `/var/lib/etcd`.
+
+```bash
+kubectl -n kube-system exec -it etcd-<Tab> -- sh \
+  -c "ETCDCTL_API=3 \
+  ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.crt \
+  ETCDCTL_CERT=/etc/kubernetes/pki/etcd/server.crt \
+  ETCDCTL_KEY=/etc/kubernetes/pki/etcd/server.key  \
+  etcdctl --endpoints=https://127.0.0.1:2379 \
+  snapshot save /var/lib/etcd/snapshot.db "
+```
+
+And you'll get a response similar to 
+
+```bash
+{"level":"info","ts":1648840656.8329804,"caller":"snapshot/v3_snapshot.go:119","msg":"created temporary db file","path":"/var/lib/etcd/snapshot.db.part"}
+{"level":"info","ts":"2022-04-01T19:17:36.839Z","caller":"clientv3/maintenance.go:200","msg":"opened snapshot stream; downloading"}
+{"level":"info","ts":1648840656.841397,"caller":"snapshot/v3_snapshot.go:127","msg":"fetching snapshot","endpoint":"https://127.0.0.1:2379"}
+{"level":"info","ts":"2022-04-01T19:17:36.890Z","caller":"clientv3/maintenance.go:208","msg":"completed snapshot read; closing"}
+{"level":"info","ts":1648840656.900381,"caller":"snapshot/v3_snapshot.go:142","msg":"fetched snapshot","endpoint":"https://127.0.0.1:2379","size":"4.0 MB","took":0.067326355}
+{"level":"info","ts":1648840656.9014206,"caller":"snapshot/v3_snapshot.go:152","msg":"saved","path":"/var/lib/etcd/snapshot.db"}
+Snapshot saved at /var/lib/etcd/snapshot.db
+```
+
+After creating the snapshot, verify it is there with 
+
+```bash
+sudo ls -l /var/lib/etcd/
+```
+
+And the response should look like
+
+```bash
+total 3916
+drwx------ 4 root root    4096 Apr  1 17:47 member
+-rw------- 1 root root 4001824 Apr  1 19:17 snapshot.db
+```
+
+6. Now backup the snapshot and the other information used to create it.
+
+```bash
+mkdir $HOME/backup
+sudo cp /var/lib/etcd/snapshot.db $HOME/backup/snapshot.db-$(date +%m-%d-%y)
+sudo cp /root/kubeadm-config.yaml $HOME/backup/
+sudo cp -r /etc/kubernetes/pki/etcd $HOME/backup/
+```
+
+It is good practice to crete snapshots on a regular basis, using a cronjob or some other scheduling tool to creat them.
+
+When using the `snapshot restore` functionality, the database cannot be in use.  In an HA cluster, the control plane would be removed and replaced and a restore would not be needed.  Official documentation on restoring etcd can be found in the [Kubernetes docs here](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/#restoring-an-etcd-cluster)
+
+
+### Upgrading the cluster
+
+:::note
+'kubeadm' only supports updating versions 1.n.x to 1.n+1.x and 1.n.x to 1.n.y, where (y > x).
+
+For example, if the cluster is built with `kubeadm` 1.22.1, to upgrade to the next major version you would need to go to 1.23.1, and not 1.23.4.  You could however go from 1.22.1 to 1.22.4
+:::
+
+1. Upgrade the package metadata and list the available versions of kubeadm that can be installed.
+
+```bash
+sudo apt update
+sudo apt-cache madison kubeadm
+```
+
+You should get something like
+
+```bash
+ kubeadm |  1.22.3-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.22.2-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.22.1-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.22.0-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm | 1.21.11-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm | 1.21.10-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.9-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.8-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.7-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.6-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.5-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.4-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.3-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.2-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.1-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+   kubeadm |  1.21.0-00 | http://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
+```
+
+2. Remove the hold on `kubeadm`, install the next version of `kubeadm`, and then add the hold back to the package to prevent unintended updates.
+
+```bash
+sudo apt-mark unhold kubeadm
+sudo apt-get install -y kubeadm=1.22.1-00
+sudo apt-mark hold kubeadm
+```
+
+:::note
+In [chapter 3](./chapter03.md#lab-31---install-kubernetes) we installed `kubeadm=1.21.1-00` so we must go to `kubeadm=1.22.1-00`
+:::
+
+Then check the version to confir the update was successful.
+
+```bash
+kubeadm version
+```
+
+```bash
+kubeadm version: &version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.1", GitCommit:"632ed300f2c34f6d6d15ca4cef3d3c7073412212", GitTreeState:"clean", BuildDate:"2021-08-19T15:44:22Z", GoVersion:"go1.16.7", Compiler:"gc", Platform:"linux/amd64"}
+```
+
+3. Prepare the cp node for updates. To do this we first need to evict as many pods as possible. By nature, daemonsets are on every node, and some, like the Calico ones, must remain.
+
+```bash
+
+```
+
+continue at #6 in lab pdf

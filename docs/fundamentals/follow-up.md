@@ -29,11 +29,14 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 
 - [b+tree](./chapter04.md#etcd-database)
 - [in-tree deployment](./chapter04.md#other-agents)
+    - [k8s sig](https://cloud-provider-vsphere.sigs.k8s.io/concepts/in_tree_vs_out_of_tree.html)
 - [out-of-tree deployment](./chapter04.md#other-agents)
+    - [k8s sig](https://cloud-provider-vsphere.sigs.k8s.io/concepts/in_tree_vs_out_of_tree.html)
 - [iptables](./chapter04.md#worker-nodes)
 - [ipvs](./chapter04.md#worker-nodes)
 - [supervisord](./chapter04.md#worker-nodes)
 - [NUMA](./chapter04.md#kubelet)
+    - [Wikipedia](https://en.wikipedia.org/wiki/Non-uniform_memory_access)
 - [DeltFIFO queue](./chapter04.md#operators)
 - [Golang work queues](./chapter04.md#operators)
 - [IPC](./chapter04.md#pods)
@@ -48,6 +51,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [Interprocess communication (IPC)](./chapter04.md#single-ip-per-pod)
 - [Subnet](./chapter04.md#cni-network-configuration-file)
 - [Network address translation (NAT)](./chapter04.md#pod-to-pod-communication)
+- [TLS](./chapter04.md#back-up-etcd)
+- [Certificate authority](./chapter04.md#back-up-etcd)
 
 
 ## Additional
