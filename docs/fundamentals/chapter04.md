@@ -590,7 +590,164 @@ kubeadm version: &version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.1", GitC
 3. Prepare the cp node for updates. To do this we first need to evict as many pods as possible. By nature, daemonsets are on every node, and some, like the Calico ones, must remain.
 
 ```bash
-
+kubectl drain <node name> --ignore-daemonsets
 ```
 
-continue at #6 in lab pdf
+4. Once drained, you can upgrade the node. First you will want to see the upgrade plan. You will see different versions you can upgrade to but remember you will want to go from 1.n.x to 1.n+1.x, so for example, from 1.21.1 to 1.22.1. The upgrade plan will give you a detailed outline of the changes the upgrade will make.
+
+```bash
+sudo kubeadm upgrade plan
+```
+
+Once you have reviewed the plan you can apply the upgrade. The command will give you a preview and ask you to confirm you want to upgrade. Review the preview and confirm to upgrade the node to the new version.
+
+```bash
+sudo kubeadm upgrade apply v1.22.1
+```
+
+5. Check your CNI to get a compatible version with the new cluster version
+
+6. Now check the node status. It should be `SchedulingDisabled`. Run
+
+```bash
+kubectl get nodes
+```
+
+and you should get a response like
+
+```bash
+NAME              STATUS                     ROLES                  AGE   VERSION
+cp-node           Ready,SchedulingDisabled   control-plane,master   42d   v1.21.1
+worker-node       Ready                      <none>                 40d   v1.21.1
+```
+
+We also need to update the other software and restart the daemons. First release the holds we set in the last lab, then upgrade both packages and add the hold back.
+
+```bash
+sudo apt-mark unhold kubelet kubectl
+sudo apt-get install -y kubelet=1.22.1-00 kubectl=1.22.1-00
+sudo apt-mark hold kubelet kubectl
+```
+
+Finally, restart the daemons.
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+Now get the nodes again to verify the cp has been upgraded with
+
+```bash
+kubectl get nodes
+```
+
+and you should see something like
+
+```bash
+NAME              STATUS                     ROLES                  AGE   VERSION
+cp-node           Ready,SchedulingDisabled   control-plane,master   42d   v1.22.1
+worker-node       Ready                      <none>                 40d   v1.21.1
+```
+
+7. Now we can make the cp node available to the scheduler again.
+
+```bash
+kubectl uncordon <node name>
+```
+
+and verify the ready status with
+
+```bash
+kubectl get nodes
+```
+
+and you should no longer see the `SchedulingDisabled` as the `STATUS`.
+
+```bash
+NAME              STATUS                     ROLES                  AGE   VERSION
+cp-node           Ready                      control-plane,master   42d   v1.22.1
+worker-node       Ready                      <none>                 40d   v1.21.1
+```
+
+8. Now we must update the worker node.
+
+:::important
+Most of the next commands will need to be run on the __worker node__. There are a few commands that need to be run on the cp node.  _Commands that need to be run on the cp node will be in these blocks_.
+:::
+
+First, unhold, upgrade, and rehold kubeadm.
+
+```bash
+sudo apt-mark unhold kubeadm
+sudo apt-get update
+sudo apt-get install -y kubeadm=1.22.1-00
+sudo apt-mark hold kubeadm
+```
+
+9. Next, on the cp node, drain the worker node.
+
+:::important
+```bash
+kubectl drain <worker node name> --ignore-daemonsets
+```
+:::
+
+10. Now, on the worker upgrade the node.
+
+```bash
+sudo kubeadm upgrade node
+```
+
+11. Now unhold, upgrade, and rehold the other software.
+
+```bash
+sudo apt-mark unhold kubelet kubectl
+sudo apt-get install -y kubelet=1.22.1-00 kubectl=1.22.1-00
+sudo apt-mark hold kubelet kubectl
+```
+
+12. Restart the deamons for the upgrade to take effect.
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+13. Now, back on the cp, check the node status.
+
+:::important
+```bash
+kubectl get nodes
+```
+:::
+
+You should see the worker needs to be uncordoned now to allow the scheduler to use it.
+
+
+```bash
+NAME              STATUS                     ROLES                  AGE   VERSION
+cp-node           Ready                      control-plane,master   42d   v1.22.1
+worker-node       Ready,SchedulingDisabled   <none>                 40d   v1.22.1
+```
+
+Uncorden the worker node and check the status to make sure both nodes are `Ready`.
+
+:::important
+```bash
+kubectl uncordon <worker node name>
+kubectl get node
+```
+:::
+
+Once both nodes are ready the statuses should look like
+
+```bash
+NAME          STATUS   ROLES                  AGE   VERSION
+cp-node       Ready    control-plane,master   42d   v1.22.1
+worker-node   Ready    <none>                 40d   v1.22.1
+```
+
+
+### Lab 4.2 - Working with CPU and memory constraints
+
