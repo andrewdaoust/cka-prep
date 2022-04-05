@@ -749,5 +749,230 @@ worker-node   Ready    <none>                 40d   v1.22.1
 ```
 
 
+:::note
+This process was run through again to get to `v1.23.1` to match the course notes, swapping anywhere it says `1.22.1` for `1.23.1`.
+:::
+
 ### Lab 4.2 - Working with CPU and memory constraints
 
+This isction of the lab focuses on _resource limits_, _namespaces_, and more complex deployments.  We will again use the cluster we have been building up over the past lab exercises. SSH into the cp node and run all the commands for this section there.
+
+1. First, we will deploy a container called `stress` to generate load on the cluster, and then verify it is running.
+
+
+```bash
+kubectl create deployment hog --image=vish/stress
+kubectl get deployments
+```
+
+Once the deployment is ready you should see
+
+```bash
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+hog    1/1     1            1           11s
+```
+
+2. Next, describe the deployment and then view the output as a YAML.  Notice there is not settings limiting the resource use currently, just `{}`.
+
+```bash
+kubectl describe deployment hog
+kubectl get deployment hog -o yaml
+```
+
+The `resources` field in the YAML can be found under `spec.template.spec.containers` and is a setting in each container listed.
+
+3. Write the deployment YAML to a file so we can add some resource limits.
+
+```bash
+kubectl get deployment hog -o yaml > hog.yaml
+vim hog.yaml
+```
+
+Once the file is open in `vim`, add the following four lines (make sure to indent properly) under the resources section:
+
+```yaml
+limits:
+  memory: "4Gi"
+requests:
+  memory: "2500Mi"
+```
+
+4. Replace the deployment and verify the change.  You should see the new resources set in YAML output this time matching what you added to the YAML file.
+
+```bash
+kubectl replace -f hog.yaml
+kubectl get deploymeny hog -o yaml
+```
+
+5. now go look at the `stdio` of the hog container. Get the pod name, and then look at the container logs.
+
+```bash
+kubectl get pods
+kubectl logs <hog pod name>
+```
+
+The logs should look something like
+
+```bash
+I0405 16:49:23.354678       1 main.go:26] Allocating "0" memory, in "4Ki" chunks, with a 1ms sleep between allocations
+I0405 16:49:23.354726       1 main.go:29] Allocated "0" memory
+```
+
+Open a second and third terminal and ssh into the cp node and worker node.  Run `top` in each to view the memory usage. You should not be seeing `stress` as it should not be using enough resources to be seen in the list.
+
+6. Now let's edit the hog.yaml file again to consume some CPU and memory. Upen the file with `vim` and add the following:
+
+Change the `resources` section to 
+
+```yaml
+limits:
+  cpu: "1"
+  memory: "4Gi"
+requests:
+  cpu: "0.5"
+  memory: "2500Mi"
+```
+
+and below the `resources` add a new argument called `args` with the following:
+
+```yaml
+args:
+- -cpus
+- "2"
+- -mem-total
+- "950Mi"
+- -mem-alloc-size
+- "100Mi"
+- mem-alloc-sleep
+- "1s"
+```
+
+7. Now delete the deployment and recreate it.
+
+```bash
+kubectl delete deployment hog
+kubectl create -f hog.yaml
+```
+
+You should now see high usage from `stress` in the `top` table.
+
+:::note
+If the `top` table does not show high usage the workload or the container may have failed.
+
+To check you can get the pods and check the logs
+
+```bash
+kubectl get pods
+kubectl logs <pod name>
+```
+
+The logs and whether the pod is running should give you an idea of what kind of error you have
+- Not running is likely a missing parameter
+- Running is likely an improperly set parameter
+:::
+
+
+### Lab 4.3 - Resource limits for a namesapce
+
+Limits can be set on the deployment level, or at the namespace level. In this lab section we will create a namespace with resource limits and then create another hod deployment to run within that namespace, and it should be limited to less respirce than the previous hog deployment.
+
+1. First, we'll create the new namespace, 'low-usage-limit`.
+
+```bash
+kubectl create namespace low-usage-limit
+kubectl get namespace
+```
+
+Then create a YAML to define the resource limits for the namespace.  It should be of kind `LimitRange`.
+
+```bash
+vim low-resource-range.yaml
+```
+
+and it should contain
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: low-resource-range
+spec:
+  limits:
+  - default:
+      cpu: 1
+      memory: 500Mi
+    defaultRequest:
+      cpu: 0.5
+      memory: 100Mi
+    type: Container
+```
+
+2. Now we can create the `LimitRange` object in the new namespace.
+
+```bash
+kubectl -n low-usage-limit create -f low-resource-range.yaml
+```
+
+And verify it worked
+
+```bash
+kubectl get LimitRange --all-namespaces
+```
+
+Don't forget the `--all-namespaces` flag, otherwise it will just show the LimitRanges in the default namespace and you will not find anything.
+
+3. Now create a new deployment in the new namespace.
+
+```bash
+kubectl -n low-usage-limit create deployment limited-hog --image=vish/stress
+kubectl get pods --all-namespaces
+```
+
+notice, the first hog deployment is still running.
+
+You can view just the pods in the namespace with
+
+```bash
+kubectl -n low-usage-limit get pods
+```
+
+Look at the pod details as well.
+
+```bash
+kubectl -n low-usage-limit get pod <limited-hog pod name> -o yaml
+```
+
+Notice the resources are inherited from the LimitRange.
+
+4. Now copy the original `hog.yaml` deployment file and update the `namespace` field with the new one we created and also delete the `selflink` if it exists.
+
+```bash
+cp hog.yaml hog2.yaml
+vim hog2.yaml
+```
+
+And then create a new deployment with the new YAML that was just modified.
+
+```bash
+kubectl create -f hog2.yaml
+kubectl get deployments --all-namespaces
+```
+
+You should see a new deployment named `hog` in the `limited-usaged-limit` namespace.
+
+5. In another window use `top` to view the usage on the nodes.  You should see the new `hog` deployment and the original one at the op of the list using the same amount of resources.  This is because the deployment level limits override any in the namespace.
+
+6. Delete the deployments to recover system resources.
+
+```bash
+kubectl -n low-usage-liimit delete deployment hog
+kubectl delete deployment hog
+```
+
+## Knowledge check
+
+- The smallest object or unit that can be worked with in Kubernetes is the __Pod__
+- __One__ IP address can be configured per Pod
+- The main configuration agent on a master server is the __kubeapi-server__
+- The main agent on a worker node is a __kubelet__
+- A __Service__ connects other resources together and handles Ingres and Egress traffic
