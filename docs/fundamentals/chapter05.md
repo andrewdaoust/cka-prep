@@ -16,3 +16,59 @@ title: APIs and Access
 
 ### API access
 
+Kubernetes has a powerful REST API that is the heart of it's architecture.  Knowing how to find the endpoints for resources and understandong how the API changes between versions is vitally important for administrative tasks.  Starting at v1.16, the API no longer honors depreciated objects.
+
+As was discusses in [the last section](./chapter04.md) the __kubeapi-server__ is the main agent for communication within and outside the cluster.  A `curl` query to the API will expose current groups.  These groups can have different versions which mature independently of one another. They follow a domain name format, with many reserved such as single word domains, the empty group, and anything with a `.k8s.io` ending.
+
+
+### RESTful
+
+`kubectl` work through making API calls for you through typical HTTP verbs.  You could also interact with the cluster externally using `curl` as long as you pass the appropriate certs and keys.
+
+```bash
+curl --cert userbob.pem --key userBob-key.pem \  
+  --cacert /path/to/ca.pem \   
+  https://k8sServer:6443/api/v1/pods
+```
+
+Thi ability to impersonate other users/groups allows for manual override of authentication which can be useful in debugging authorization policies for other groups of users.
+
+
+### Checking access
+
+Security will be discussed later but for now, it can be helpful to check current authorization of both administrators as well as other users.  Here are some examples:
+
+```bash
+kubectl auth can-i create deployments
+```
+
+Using the `auth can-i` subcommand we can check for what functionality a user has. In this case we would be checking if the user issuing the command with `kubectl` can create deployments in the `default` namespace. The API will return with a `yes` or `no`.
+
+```bash
+kubectl auth can-i create deployments --as bob
+```
+
+This time around we are checking if the user `bob`, by passing the username with the `--as` flag, can create deployments in the `default` namespace.
+
+```bash
+kubectl auth can-i create deployments --as bob  --nmespace developer
+```
+
+Again we check if the user `bob` can create deployments, this time in the `developer` namespace by also passing the `--namespace` flag.
+
+Currently, there are three APIs that can be applied to set who/what can be queried:
+- `SelfSubjectAccessReview` - Access review for any user, helpful for delegating to others
+- `LocalSubjectReview` - Review is restricted to a namespace
+- `SelfSubjectRulesReview` - A review showing allowed actions for a user withing a particular namespace
+
+You can also use 
+
+```bash
+kubectl auth reconcile -f <YAML file>
+```
+
+to check to see if the necessary permissions exist to create the object specified in the file.  No output indicates the creation is allowed.
+
+
+### Optimistic currency
+
