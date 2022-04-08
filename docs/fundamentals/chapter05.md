@@ -72,3 +72,33 @@ to check to see if the necessary permissions exist to create the object specifie
 
 ### Optimistic currency
 
+API calls to Kubernetes must use the default serialization of JSON.  There are experimental features that use Google's protobuf serialization.  Even hrough we often work in YAML files, they are converted to and from JSON fr the API calls.
+
+Kubernetes uses `resourceVersion` to determine API updates and implement optimistic currency., i.e. objects do not get locked from read time to write time of the object.  Kubernetes handles this by first checking the `resourceVersion` and if the number has been changed a `409 CONFLICT` error is returned.  The `resourceVersion` is backed by the `modifiedIndex` parameter in etcd.  It is unique to the namespace, kind, and server.  Any operations that do not change an object do not change the `resourceVersion`, for example `WATCH` and `GET`s.
+
+
+### Using annotations
+
+In Kubernetes labels are used to work with object or collections of objects.
+
+Annotations on the otherhand serve as a way to add metadata to objects that is useful outside of Kubernetes.  Similar to labels, they are key-value pairs.  They also can hold more information and information that is more human readable than labels.
+
+Some use cases of annotations:
+- Timestamps
+- Pointer to related objects in other ecosystems, e.g. a link to view logging externally or to a repo containing the source code of the object
+- Developer email who created object
+- Friendly description of object
+
+Any of the uses for annotations is information that could sit elsewhere in some other database but allowing for them increases flexibilty and allows for better integration of management and deployment tools.
+
+Some examples of how to annotate Pods in a namespace, overwrite it for a Pod, and then delete the annotation on that Pod:
+
+```bash
+kubectl annotate pods --all description='Production Pods' -n prod
+kubectl annotate --overwrite pod webpod description="Old Production Pods" -n prod
+kubectl -n prod annotate pod webpod description-
+```
+
+
+### Simple pod
+
