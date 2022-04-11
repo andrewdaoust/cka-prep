@@ -102,3 +102,34 @@ kubectl -n prod annotate pod webpod description-
 
 ### Simple pod
 
+Remember that a Pod is the smallest object we can work with in Kubernetes.  A pod can contain a single container, or multiple, often with the primary application container and some number of supporting ones.
+
+Here is an example of a simple YAML Pod manifest:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: firstpod
+spec:
+  containers:
+  - image: nginx
+    name: stan
+```
+
+Notice the `apiVersion`, which is how Kubernetes tracks the _optimistic currency_. There is also the `kind` field to specify which kind of object is being defined in the manifest.  Then there is the `metadata` field to define any metadata for thr Pod with at least a `name`. Here is where you can add `labels` and `annotations` as well.  Finally is the `spec` field where you define what will run and any parmeters. This contains any definitions for `containers` that the Pod will contain, among some other possible definitions.
+
+`kubectl create` can be used to create Pods in Kubernetes.
+
+```bash
+kubectl create -f simple.yaml
+kubectl get pods
+kubectl get pod firstpod -o yaml
+kubectl get pod firstpod -o json
+```
+
+Once the deployment is created, you can check its status with the `get pods` sub commands and list the Pod definitions to the terminal with `get pods <pod name> -o <format>`.
+
+
+### Manage API resources with `kubectl`
+
