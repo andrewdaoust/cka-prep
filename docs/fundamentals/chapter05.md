@@ -133,3 +133,17 @@ Once the deployment is created, you can check its status with the `get pods` sub
 
 ### Manage API resources with `kubectl`
 
+All objects in Kubernetes are exposed via RESTful API calls so that they can be managed with HTTP, JSON, or XML (although typically it is HTTP).  Object states can be changed with the standard HTTP verbs.
+
+`kubectl` exposes information for the REST calls it is making if you increase the verbosity.  This will include additional logging like the `curl` commands being made behind the scenes. Max verbosity is `10`.
+
+```bash
+kubectl --v=10 get pods firstpod
+kubectl --v=10 delete pods firstpod
+```
+
+If you ran the first command above, you would see the HTTP method as `XGET` and when running the second you would see it change to `XDELETE`.
+
+
+### Access from outside the cluster
+
