@@ -147,3 +147,94 @@ If you ran the first command above, you would see the HTTP method as `XGET` and 
 
 ### Access from outside the cluster
 
+Instead of using `kubectl` you could use `curl` to make changes to the cluster.
+
+The basic server configuration (with omitted TLS cert info) can be found using 
+
+```bash
+kubectl config view
+```
+
+Running this command will show config pulled from `~/.kube/config`.  In the [previous section](./chapter05.md#manage-api-resources-with-kubectl), if you ran the command with additional verbosity, you'd see something like `Config loaded from file ~/.kube/config` in the logging.
+
+Without the cert authority, key, and cert from the kube config file, only insecure `curl` commands would work, which severly limits how much you can interact with the cluster.  In the upcoming lab we will use `curl` and TLS to access the cluster.
+
+
+### `~/.kube/config`
+
+Here's an example of a section of a `~/.kube/config` file:
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdF.....
+    server: https://10.128.0.3:6443 ;
+    name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: LS0tLS1CRUdJTib.....
+    client-key-data: LS0tLS1CRUdJTi....
+```
+
+Here is what each major section is.
+
+#### `apiVersion`
+
+Similar to other objects in Kubernetes, this field instructs the kube-apiserver where to assign the data.
+
+#### `clusters`
+
+Contains the name of the cluster and where to send API requests. The sub-field `certificate-authority-data` is also passed to authenticate requests made by `curl`.
+
+#### `contexts`
+
+This field allows for easy access to multiple clusters, and potentially by multiple users, in one configuration file.  It can be used to set the `namespace`, `user`, or `cluster`.
+
+#### `current-context`
+
+Shows what cluster and user `kubectl` commands will go to. These can be passed on a per command basis.
+
+#### `kind`
+
+Every object in Kubernetes has a `kind` set. In this case, the `kind` of object is `Config`.
+
+#### `preferences`
+
+Not currently used in the example above, but it can used for optional settings of `kubectl`, like colorizing outputs.
+
+#### `users`
+
+Nicknames for associated client credentials, such as key and certs, usernames and passwords, or a token.
+
+A token and username/password are mutually exclusive and can be set up via `kubectl config set-credentials`.
+
+
+### Namespaces
+
+_Namespace_ is a term used both for the feature of the Linux kernel and Kubernetes the allos for segregation of resources.  In the case of the Linus kernel, it is segregating system resources, while in Kuberentes it is the segregation of API objects.
+
+Every call to the API includes a namesapce, and it uses the `default` namespace if one is not specified: `https://<Cluster IP>:6443/api/v1/namespaces/default/pods`
+
+Four namesapces are created along with the cluster.
+
+1. __`default`__ - Where resources are assumed unless otherwise specified.
+2. __`kube-node-lease`__ - Namespace for worker node lease information to be stored.
+3. __`kube-public`__ - Namespace that is readable by all, even ones not authenticated.  General information about the cluster is included in this namespace.
+4. __`kube-system`__ - Namespace for infrastructure pods.
+
+If you want to see resources in all namespaces, the `--all-namespaces` option can be passed with the `kubectl` command.
+
+
+#### Working with namespaces
+
+
