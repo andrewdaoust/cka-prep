@@ -237,4 +237,142 @@ If you want to see resources in all namespaces, the `--all-namespaces` option ca
 
 #### Working with namespaces
 
+You can view the list of namespaces with
+
+```bash
+kubectl get ns
+```
+
+To create a new one you can do
+
+```bash
+kubectl create ns mynspace
+```
+
+You can describe a namespace like other objects
+
+```bash
+kubectl describe ns mynspace
+```
+
+The config in YAML format for the namespace can be viewed with
+
+```bash
+kubectl get ns/mynspace -o yaml
+```
+
+And you can delete a namespace with
+
+```bash
+kubectl delete ns/mynspace
+```
+
+Once a namespace is created, it can be referencing in YAML when defining other objects.
+
+```yaml
+apiVersion: V1
+kind: Pod
+metadata:
+    name: redis
+    namespace: mynspace
+...
+```
+
+
+### API resources with `kubectl`
+
+Here is a list of all objects that are exposed by `kubectl`.  Expect this list to change as Kuberentes continues to mature.
+
+- `all`
+- `certificatesigningrequests` or `csr`
+- `clusterrolebindings`
+- `clusterroles`
+- `clusterroles` which is only available to federation apiservers
+- `componentstatuses` or `ca`
+- `configmaps` or `cm`
+- `controllerrevisions`
+- `cronjobs`
+- `customresourcedefinition` or `crd`
+- `daemonsets` or `ds`
+- `deployments` or `deploy`
+- `endpoints` or `ep`
+- `events` or `ev`
+- `horizontalpodautoscalers` or `hpa`
+- `ingresses` or `ing`
+- `jobs`
+- `limitranges` or `limits`
+- `namespaces` or `ns`
+- `networkpolicies` or `netpol`
+- `node` or `no`
+- `persistentvolumeclaims` or `pvc`
+- `persistentvolumes` or `pv`
+- `poddisruptionbudgets` or `pdb`
+- `podpreset`
+- `pods` or `po`
+- `podsecuritypolicies` or `psp`
+- `podtemplates`
+- `replicasets` or `rs`
+- `replicationcontrollers` or `rc`
+- `resourcequotas` or `quota`
+- `rolebindings`
+- `roles`
+- `secrets`
+- `serviceaccounts` or `sa`
+- `services` or `svc`
+- `statefulsets`
+- `storageclasses`
+
+
+### Additional resource methods
+
+On top of basic resource management, certain objects have some other extremely helpful endpoints in the API.  For example, the logs of a container, `exec`ing into a container, or watching for changes.
+
+```bash
+curl --cert /tmp/client.pem --key /tmp/client-key.pem \
+    --cacert /tmp/ca.pem -v XGET \
+    https://<Cluster IP>:6443/api/v1/namespaces/default/pods/firtpod/log
+```
+
+Equivalently with `kubectl` would be
+
+```bash
+kubectl logs firstpod
+```
+
+Some other calls that can be made are
+
+```bash
+GET /api/v1/namespaces/{namespace}/pods/{name}/exec
+GET /api/v1/namespaces/{namespace}/pods/{name}/log
+GET /api/v1/watch/namespaces/{namespace}/pods/{name}
+```
+
+
+### Swagger and OpenAPI
+
+The Kubernetes API was built using a Swagger specification. This has been evolving towards the OpenAPI initiative, which is extremely useful so you can autogenerate client code.  All stable resource definitions are in the docs site.  The API groups can be browsed in a Swagger UI on the [OpenAPI specification page](https://swagger.io/specification/).
+
+
+### API maturity
+
+Using API groups and versions allow development to continue without changes to existing groups and allows for easier growth and splitting work among different teams.
+
+Use of JSON and Protobuf serialization will follow the same release guidelines.
+
+#### Alpha
+
+This is denoted with `alpha` in the version name. These features are often still buggy and disabled by default. These features can also change or altogether disappear without notice. Backward compatibilty is not guaranteed either. These features should only be used on test clusters that are rebuilt often.
+
+#### Beta
+
+Denoted with `beta` in the version name.  These features are more well tested and are enabled by default. It also ensures backward compatibility will be tested going forward but hasn't been tested and adopted widely enough to be considered stable.
+
+#### Stable
+
+Stable releases have no designator, just the version number. Currently, the only stable version is `v1`.
+
+
+## Lab Exercises
+
+### Lab 5.1 - Configuring TLS access
 
