@@ -235,7 +235,7 @@ Four namesapces are created along with the cluster.
 If you want to see resources in all namespaces, the `--all-namespaces` option can be passed with the `kubectl` command.
 
 
-#### Working with namespaces
+### Working with namespaces
 
 You can view the list of namespaces with
 
