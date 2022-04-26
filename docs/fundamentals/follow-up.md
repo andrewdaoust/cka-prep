@@ -58,6 +58,7 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 ## Chapter 5
 
 - [Protobuf](./chapter05.md#optimistic-currency)
+- [TLS](./chapter05.md#access-from-outside-the-cluster)
 
 
 ## Additional

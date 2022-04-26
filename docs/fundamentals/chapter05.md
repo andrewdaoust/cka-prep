@@ -329,8 +329,8 @@ On top of basic resource management, certain objects have some other extremely h
 
 ```bash
 curl --cert /tmp/client.pem --key /tmp/client-key.pem \
-    --cacert /tmp/ca.pem -v XGET \
-    https://<Cluster IP>:6443/api/v1/namespaces/default/pods/firtpod/log
+  --cacert /tmp/ca.pem -v XGET \
+  https://<Cluster IP>:6443/api/v1/namespaces/default/pods/firtpod/log
 ```
 
 Equivalently with `kubectl` would be
@@ -376,3 +376,176 @@ Stable releases have no designator, just the version number. Currently, the only
 
 ### Lab 5.1 - Configuring TLS access
 
+#### Overview
+
+`kubectl` makes calls to the Kubernetes API for you, but you could do the same using `curl` or a golang client with the correct TLS keys. Making calls to the _kube-apiserver_ get or set PodSpec, or desired state. If thr request is a new state the control plane will update the cluster until the desired state is met by the current state.
+
+API requests must pass their information as JSON. `kubectl` converts YAML into JSON when making the API request. There are many settings in the API request but there must be the `apiVersion`, `kind`, `metadata`, and `spec` included to declare what kind of object to create. The `spec` field depends on the type of object being created.
+
+First view the `kubectl` configuration file.
+
+```bash
+less $HOME/.kube/config
+```
+
+Notice, the `certificate-authority-data`, `client-certificate-data` and `client-key-data` fields in the file.  These are what we want to extract so we can use `curl` directly to interact with the API.
+
+Next we will want to extract the keys to variables.
+
+```bash
+export client=$(grep client-cert $HOME/.kube/config |cut -d" " -f 6)
+export key=$(grep client-key-data $HOME/.kube/config |cut -d " " -f 6)
+export auth=$(grep certificate-authority-data $HOME/.kube/config |cut -d " " -f 6)
+```
+
+You can then write these to the console to make sure they were extracted properly with `echo` like so:
+
+```bash
+echo $client
+echo $key
+echo $auth
+```
+
+Then we will decode each of these so we can use them with `curl`.
+
+```bash
+echo $client | base64 -d - > ./client.pem
+echo $key | base64 -d - > ./client-key.pem
+echo $auth | base64 -d - > ./ca.pem
+```
+
+To decode the base64 string, we first write the string to standard output with `echo`. This is then piped into the `base64` command in decode mode (`-d`) taking the input from standard output (by passing `-`) and then redirect the output to a `pem` file.
+
+Next get the API server URL from the config file.
+
+```bash
+kubectl config view | grep server
+```
+
+Now we can use `curl` to interact with the API.
+
+```bash
+curl --cert ./client.pem \
+  --key ./client-key.pem \
+  --cacert ./ca.pem
+  https://<ClusterIP>:6443/api/v1/pods
+```
+
+And you should recieve a large JSON response. Now create a JSON file to create a new Pod.
+
+```bash
+vim curlpod.json
+```
+
+and it should contain
+
+```json
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "curlpod",
+    "namespace": "default",
+    "labels": {
+      "name": "examplepod"
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "nginx",
+        "image": "nginx",
+        "ports": [ {"containerPort": 80} ]
+      }
+    ]
+  }
+}
+```
+
+Now we will send an `XPOST` with `curl` to create the Pod with this JSON.
+
+```bash
+curl --cert ./client.pem \
+  --key ./client-key.pem \
+  --cacert ./ca.pem
+  https://<ClusterIP>:6443/api/v1/namespaces/default/pods \
+  -XPOST -H'Content-Type: application/json' -d@curlpod.json
+```
+
+You can then verify the pod is `Running` with 
+
+```bash
+kubectl get pods
+```
+
+### Lab 5.2 - Explore API calls
+
+Once way to see what commands are doing is with `strace`.
+
+To use it, prefix your command with it.
+
+```bash
+strace kubectl get nodes
+```
+
+The information is cached, so running the command multiple times may cause some slightly variation to the outputs. Near the end is a call to the `openat` function. Find the path that is being passed to the function and `cd` to its parent directory.
+
+```bash
+cd $HOME/.kube/cache/discovery/
+ls
+```
+
+You'll see the another subdirectory names after the hostname and the port like `k8scp_6443`. Change into it and list the directories contents and you'll see there are more subdirectories with configuration info for Kubernetes.
+
+```bash
+cd k8scp_6443
+ls
+```
+
+You can list out all the subfiles as well with
+
+```bash
+find .
+```
+
+Now let's view the objects in `v1` of the API.  
+
+```bash
+python3 -m json.tool v1/serverresources.json
+```
+
+For each object type, or `kind` you can view the list of `verbs` or actions that can be used. Under each resource type, you'll see if the object has any `shortNames` which makes using them in the command line easier.
+
+For example, `endpoints` resources have a short name of `ep` so the following commands are equivalent
+
+```bash
+kubectl get endpoints
+kubectl get ep
+```
+
+Notice there are 37 different resource types in the v1 file we are looking at.
+
+```bash
+python3 -m json.tool v1/serverresources.json | grep kind
+```
+
+Looking in other files you can find some more
+
+```bash
+python3 -m json.tool apps/v1/serverresources.json | grep kind
+```
+
+Don't forget to delete the `curlpod` to free up the system resources.
+
+```bash
+kubectl delete po curlpod
+```
+
+## Knowledge check
+
+- Kubernetes uses a RESTful API-driven architecture, accepting standard HTTP verbs
+- __Annotations__ allow for metadata to be included with an object that may be helpful outside the Kubernetes object interaction
+- __`apiVersion`__, __`kind`__, __`metadata`__, and __`spec`__ bust be included in a pod template
+- __`--all-namespaces`__ should be appended to commands to affect every namespace with `kubectl`
+- Objects are __not__ restricted to a single namespace
+- 
