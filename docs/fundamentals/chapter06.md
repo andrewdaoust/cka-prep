@@ -6,3 +6,24 @@ title: API Objects
 ## Course Reading
 
 ### Learning objectives
+
+- Explore API versions
+- Discuss rapid change and development
+- Deploy and configure an application using a Deployment
+- Examine primatives for a self-healing application
+- Scale an application
+
+
+### Overview
+
+This chapter will cover API objects.  We will learn about resources in the `v1` API group. Objects move from `alpha` to `beta` and then finally to `v1` once they are considered stable.
+
+DaemonSets ensure a Pod for every node.  StatefulSets stick a container to a node and act like a deployment.  These have both progressed to `apps/v1` stability. Jobs and CronJobs have reached `batch/v1` stability.
+
+Role-Based Access Control (RBAC), which is essential to security, went from `v1alpha` to `v1` stability in one release cycle.
+
+Because Kubernetes is such a fast moving project, it is important to keep track of changes. Any changes could be important to ongoing administration of the cluster.
+
+New feature tracking for Kubernetes can be found in [this repo](https://github.com/kubernetes/enhancements).
+
+Release notes can be found by reading through the change logs in the Kubernetes repo [here](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG). You can also search and filter through change logs on [this site](https://relnotes.k8s.io/).
