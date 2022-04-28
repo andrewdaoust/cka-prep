@@ -27,3 +27,12 @@ Because Kubernetes is such a fast moving project, it is important to keep track 
 New feature tracking for Kubernetes can be found in [this repo](https://github.com/kubernetes/enhancements).
 
 Release notes can be found by reading through the change logs in the Kubernetes repo [here](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG). You can also search and filter through change logs on [this site](https://relnotes.k8s.io/).
+
+:::important
+Starting in `v1.16`, depreciated API object versions respond with an error rather than being accepted. This is an important change from past behavior.
+:::
+
+
+### `v1` API group
+
+The `v1` API group is no longer a single group, but a collection of groups for each main object category.
