@@ -16,9 +16,9 @@ title: APIs and Access
 
 ### API access
 
-Kubernetes has a powerful REST API that is the heart of it's architecture.  Knowing how to find the endpoints for resources and understandong how the API changes between versions is vitally important for administrative tasks.  Starting at v1.16, the API no longer honors depreciated objects.
+Kubernetes has a powerful REST API that is the heart of it's architecture.  Knowing how to find the endpoints for resources and understanding how the API changes between versions is vitally important for administrative tasks.  Starting at v1.16, the API no longer honors depreciated objects.
 
-As was discusses in [the last section](./chapter04.md) the __kubeapi-server__ is the main agent for communication within and outside the cluster.  A `curl` query to the API will expose current groups.  These groups can have different versions which mature independently of one another. They follow a domain name format, with many reserved such as single word domains, the empty group, and anything with a `.k8s.io` ending.
+As was discusses in [the last section](./chapter04.md) the __kube-apiserver__ is the main agent for communication within and outside the cluster.  A `curl` query to the API will expose current groups.  These groups can have different versions which mature independently of one another. They follow a domain name format, with many reserved such as single word domains, the empty group, and anything with a `.k8s.io` ending.
 
 
 ### RESTful
@@ -51,7 +51,7 @@ kubectl auth can-i create deployments --as bob
 This time around we are checking if the user `bob`, by passing the username with the `--as` flag, can create deployments in the `default` namespace.
 
 ```bash
-kubectl auth can-i create deployments --as bob  --nmespace developer
+kubectl auth can-i create deployments --as bob  --namespace developer
 ```
 
 Again we check if the user `bob` can create deployments, this time in the `developer` namespace by also passing the `--namespace` flag.
@@ -72,7 +72,7 @@ to check to see if the necessary permissions exist to create the object specifie
 
 ### Optimistic currency
 
-API calls to Kubernetes must use the default serialization of JSON.  There are experimental features that use Google's protobuf serialization.  Even hrough we often work in YAML files, they are converted to and from JSON fr the API calls.
+API calls to Kubernetes must use the default serialization of JSON.  There are experimental features that use Google's protobuf serialization.  Even though we often work in YAML files, they are converted to and from JSON fr the API calls.
 
 Kubernetes uses `resourceVersion` to determine API updates and implement optimistic currency., i.e. objects do not get locked from read time to write time of the object.  Kubernetes handles this by first checking the `resourceVersion` and if the number has been changed a `409 CONFLICT` error is returned.  The `resourceVersion` is backed by the `modifiedIndex` parameter in etcd.  It is unique to the namespace, kind, and server.  Any operations that do not change an object do not change the `resourceVersion`, for example `WATCH` and `GET`s.
 
@@ -81,7 +81,7 @@ Kubernetes uses `resourceVersion` to determine API updates and implement optimis
 
 In Kubernetes labels are used to work with object or collections of objects.
 
-Annotations on the otherhand serve as a way to add metadata to objects that is useful outside of Kubernetes.  Similar to labels, they are key-value pairs.  They also can hold more information and information that is more human readable than labels.
+Annotations on the other hand serve as a way to add metadata to objects that is useful outside of Kubernetes.  Similar to labels, they are key-value pairs.  They also can hold more information and information that is more human readable than labels.
 
 Some use cases of annotations:
 - Timestamps
@@ -89,7 +89,7 @@ Some use cases of annotations:
 - Developer email who created object
 - Friendly description of object
 
-Any of the uses for annotations is information that could sit elsewhere in some other database but allowing for them increases flexibilty and allows for better integration of management and deployment tools.
+Any of the uses for annotations is information that could sit elsewhere in some other database but allowing for them increases flexibility and allows for better integration of management and deployment tools.
 
 Some examples of how to annotate Pods in a namespace, overwrite it for a Pod, and then delete the annotation on that Pod:
 
@@ -117,7 +117,7 @@ spec:
     name: stan
 ```
 
-Notice the `apiVersion`, which is how Kubernetes tracks the _optimistic currency_. There is also the `kind` field to specify which kind of object is being defined in the manifest.  Then there is the `metadata` field to define any metadata for thr Pod with at least a `name`. Here is where you can add `labels` and `annotations` as well.  Finally is the `spec` field where you define what will run and any parmeters. This contains any definitions for `containers` that the Pod will contain, among some other possible definitions.
+Notice the `apiVersion`, which is how Kubernetes tracks the _optimistic currency_. There is also the `kind` field to specify which kind of object is being defined in the manifest.  Then there is the `metadata` field to define any metadata for thr Pod with at least a `name`. Here is where you can add `labels` and `annotations` as well.  Finally is the `spec` field where you define what will run and any parameters. This contains any definitions for `containers` that the Pod will contain, among some other possible definitions.
 
 `kubectl create` can be used to create Pods in Kubernetes.
 
@@ -221,11 +221,11 @@ A token and username/password are mutually exclusive and can be set up via `kube
 
 ### Namespaces
 
-_Namespace_ is a term used both for the feature of the Linux kernel and Kubernetes the allos for segregation of resources.  In the case of the Linus kernel, it is segregating system resources, while in Kuberentes it is the segregation of API objects.
+_Namespace_ is a term used both for the feature of the Linux kernel and Kubernetes the allows for segregation of resources.  In the case of the Linus kernel, it is segregating system resources, while in Kubernetes it is the segregation of API objects.
 
-Every call to the API includes a namesapce, and it uses the `default` namespace if one is not specified: `https://<Cluster IP>:6443/api/v1/namespaces/default/pods`
+Every call to the API includes a namespace, and it uses the `default` namespace if one is not specified: `https://<Cluster IP>:6443/api/v1/namespaces/default/pods`
 
-Four namesapces are created along with the cluster.
+Four namespace are created along with the cluster.
 
 1. __`default`__ - Where resources are assumed unless otherwise specified.
 2. __`kube-node-lease`__ - Namespace for worker node lease information to be stored.
@@ -330,7 +330,7 @@ On top of basic resource management, certain objects have some other extremely h
 ```bash
 curl --cert /tmp/client.pem --key /tmp/client-key.pem \
   --cacert /tmp/ca.pem -v XGET \
-  https://<Cluster IP>:6443/api/v1/namespaces/default/pods/firtpod/log
+  https://<Cluster IP>:6443/api/v1/namespaces/default/pods/firstpod/log
 ```
 
 Equivalently with `kubectl` would be
@@ -361,7 +361,7 @@ Use of JSON and Protobuf serialization will follow the same release guidelines.
 
 #### Alpha
 
-This is denoted with `alpha` in the version name. These features are often still buggy and disabled by default. These features can also change or altogether disappear without notice. Backward compatibilty is not guaranteed either. These features should only be used on test clusters that are rebuilt often.
+This is denoted with `alpha` in the version name. These features are often still buggy and disabled by default. These features can also change or altogether disappear without notice. Backward compatibility is not guaranteed either. These features should only be used on test clusters that are rebuilt often.
 
 #### Beta
 
@@ -431,7 +431,7 @@ curl --cert ./client.pem \
   https://<ClusterIP>:6443/api/v1/pods
 ```
 
-And you should recieve a large JSON response. Now create a JSON file to create a new Pod.
+And you should receive a large JSON response. Now create a JSON file to create a new Pod.
 
 ```bash
 vim curlpod.json

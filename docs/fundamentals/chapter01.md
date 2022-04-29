@@ -60,7 +60,7 @@ For the course we need two nodes with 2 vCPU and 8 GiB memory.  Here are all the
 :::note
 *This is the instance chose by the instructor in the course demo. Chosen for the better networking performance.
 
-What sort of network performace do we need? Will a `t2.medium` or a `t3a.large` be sufficient? Running that for 8 hr/day with 20 GB storage will run ~$37/person if each person runs a master and worker node for themselves.
+What sort of network performance do we need? Will a `t2.medium` or a `t3a.large` be sufficient? Running that for 8 hr/day with 20 GB storage will run ~$37/person if each person runs a master and worker node for themselves.
 :::
 
 
@@ -70,9 +70,9 @@ Configure this for 2 instances, the defaults for the other settings should be go
 
 ![configure storage](./img/ch01-configure-storage.png)
 
-Configure the storage and change the size to 20 GiB.  Also make aure the __Delete on Termination__ box is checked so any storage is deleted with thr termination of the instance.
+Configure the storage and change the size to 20 GiB.  Also make sure the __Delete on Termination__ box is checked so any storage is deleted with thr termination of the instance.
 
-You can then add tags to the istances if you choose to.
+You can then add tags to the instances if you choose to.
 
 ![configure security](./img/ch01-configure-security.png)
 
@@ -89,11 +89,11 @@ Launch a root shell with the `su` command and enter the `root` user password.
 
 In more recent distros, navigate to the `etc/sudoers.d` subdirectory and create a new file with the user you want to provide `sudo` access to as the file name. For example, if the user was named `andrew` create a file named `andrew` in `etc/sudoers.d`. Naming the file after the user is convention, but it is not strictly necessary.
 
-In the file created, add `<username> ALL=(ALL) ALL`. Going back to out example user, `andrew`, the file should contain `andrew ALL=(ALL) ALL`.  A good explaination of what this means can be found on [this](https://unix.stackexchange.com/a/201866) StackExchange answer.
+In the file created, add `<username> ALL=(ALL) ALL`. Going back to out example user, `andrew`, the file should contain `andrew ALL=(ALL) ALL`.  A good explanation of what this means can be found on [this](https://unix.stackexchange.com/a/201866) StackExchange answer.
 
 Finally, you may need to set the permissions on the file. Do this with `sudo chmod 440 /etc/sudoers.d/andrew`.  Note that some distros will require `400` instead of `440`.
 
-There is one last step, even when the system is preconfigured for `sudo`.  Most dirstos set different paths for finding executables for normals users vs the `root` user. In particular the `/sbin` and `usr/sbin` paths are not searched, since `sudo` inherits `PATH` from the user, not the `root` user.  Because of this, at least for this course, it is recommended to update the `PATH` with `PATH=$PATH:/usr/sbin:/sbin` in the `.bashrc` file.
+There is one last step, even when the system is pre-configured for `sudo`.  Most distros set different paths for finding executables for normals users vs the `root` user. In particular the `/sbin` and `usr/sbin` paths are not searched, since `sudo` inherits `PATH` from the user, not the `root` user.  Because of this, at least for this course, it is recommended to update the `PATH` with `PATH=$PATH:/usr/sbin:/sbin` in the `.bashrc` file.
 
 :::note
 For my AWS instances the `PATH` already contained `/usr/sbin` and `/sbin` so no need to update the `.bashrc`.

@@ -3,7 +3,7 @@ id: chapter02
 title: Basics of Kubernetes
 ---
 
-## Cource Reading
+## Course Reading
 
 ### Learning objectives
 
@@ -16,7 +16,7 @@ title: Basics of Kubernetes
 
 Running a single container is easy, but when trying to connect multiple containers with networking, scaling them, and deploying changes without downtime, it becomes a more difficult problem.  Kubernetes is a system to automate the deployment, scaling, and management of containerized applications. 
 
-The name is derived from the Greek __κυβερνητης__, which means helmsman or ship pilot.  Kubernetes is often refered to as K8s, with the 8 representing the 8 letters between _k_ and _s_.
+The name is derived from the Greek __κυβερνητης__, which means helmsman or ship pilot.  Kubernetes is often referred to as K8s, with the 8 representing the 8 letters between _k_ and _s_.
 
 
 ### Components of Kubernetes
@@ -32,7 +32,7 @@ Kubernetes is written in Golang (unsurprising since it is an open source project
 
 As mentioned previously, containers make it easy to package, ship, and run an application.  Docker especially has vastly improved the developer experience in these regards.
 
-However, there are many challenges that appear when running and maintaining containers at scale.  To help with the maintainence, it is good practice to implement a continuous integration/continuous delivery (CI/CD) pipeline to make build, test and verify changes to continaers. Some common tools for CI/CD include:
+However, there are many challenges that appear when running and maintaining containers at scale.  To help with the maintenance, it is good practice to implement a continuous integration/continuous delivery (CI/CD) pipeline to make build, test and verify changes to containers. Some common tools for CI/CD include:
 - [Spinnaker](https://spinnaker.io/)
 - [Jenkins](https://www.jenkins.io/)
 - [Helm](https://helm.sh/)
@@ -60,7 +60,7 @@ This is partially what makes K8s a safe choice, as it was born from 15 years of 
 
 Borg has inspired many data center orchestration systems.  Google contributed `cgroups` to the Linux kernel in 2007, which along with Linux namespaces, form the heart of containerization today.  Mesos was inspired by discussions with Google.
 
-The Cloud Foundry Foundation embraces the [12 factor application principles](https://12factor.net/) which Kuberentes and Borg adhere to well.
+The Cloud Foundry Foundation embraces the [12 factor application principles](https://12factor.net/) which Kubernetes and Borg adhere to well.
 
 
 ### Kubernetes architecture
@@ -75,7 +75,7 @@ Kubernetes is made of control plane (aka __cp__) nodes and worker nodes (formerl
 
 The Kubernetes API is exposed via the API server.  `kubectl` is the most common way to interact with the API but users can develop their own clients using `curl` commands.
 
-The kube-scheduler recieves the pod spec for containers and finds the best node to them.  Each node has two processes, a kubelet and the kube-proxy.  The kubelet is NOT the container itself, but often a `systemd` process.  The kubelet is responsible for taking requests to run containers, managing the nodes resources. The kubelet also works with the container engine (e.g. containerd, Docker, cri-o) to run the containers.
+The kube-scheduler receives the pod spec for containers and finds the best node to them.  Each node has two processes, a kubelet and the kube-proxy.  The kubelet is NOT the container itself, but often a `systemd` process.  The kubelet is responsible for taking requests to run containers, managing the nodes resources. The kubelet also works with the container engine (e.g. containerd, Docker, cri-o) to run the containers.
 
 The kube-proxy manages all the networking rules to expose the containers either to other containers or to external traffic.
 
@@ -92,7 +92,7 @@ Controller or __operators__ manage the orchestration of the pods through watch-l
 
 Service operator will request IP information from the endpoint operator, and then manages network connectivity based on labels on pods.  A service is used for establishing communication between pods, namespaces, and external sources.  __Jobs__ and __CronJobs__ handle single or repeated tasks.  There are other default operators as well.
 
-To make management of pods easier (especially when scaling to thousands of pods across hundreds of nodes), __labels__ are used.  Labels are just strings included in metadata which can be used for checking or changing state so needing to know individual names or UIDs isn't necessary.  Nodes can have __taints__ to discourage pod assignments, unless the pod metadata contains __toleration__ (more on those topcs [here](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)).
+To make management of pods easier (especially when scaling to thousands of pods across hundreds of nodes), __labels__ are used.  Labels are just strings included in metadata which can be used for checking or changing state so needing to know individual names or UIDs isn't necessary.  Nodes can have __taints__ to discourage pod assignments, unless the pod metadata contains __toleration__ (more on those topics [here](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)).
 
 Metadata also can contain __annotations__ which are part of the object but are not used as a selector like labels.  The info in the annotations can be used by a variety of sources, like the container, by third-parties, or other tools.
 

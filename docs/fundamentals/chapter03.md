@@ -17,7 +17,7 @@ title: Installation and Configuration
 
 There are many ways to get up an running with Kubernetes.
 
-If you want to get started without needing to install and configure the cluster yourself, a managed cloud provider solution is a good option.  Google offers [Google Kuberentes Engine](https://cloud.google.com/kubernetes-engine) (GKE) and AWS offers [Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) which gives users more control of cp nodes.
+If you want to get started without needing to install and configure the cluster yourself, a managed cloud provider solution is a good option.  Google offers [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine) (GKE) and AWS offers [Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) which gives users more control of cp nodes.
 
 Another simple way to get up and running is with [Minikube](https://minikube.sigs.k8s.io/docs/) which is a single binary that runs in a VirtualBox VM.  This is a great tool to use as a learning and testing environment even though it is just a single node.
 
@@ -25,16 +25,16 @@ Canonical has also developed a tool called [MicroK8s](https://microk8s.io/docs) 
 
 This course focuses on using `kubeadm` which is the suggested community tool by the Kubernetes project for setting up a cluster.  Getting the cluster set up with `kubeadm` only requires two commands, `kubeadm init` on the cp node and `kubeadm join` on any worker nodes or additional cp nodes, and the cluster bootstraps itself.
 
-To actually use the cluster the `kubectl` command is used.  This run locally on your machine and communicated with the cluster API endpoint.  `kubectl` can control all Kuberentes resources to create, manage, and delete.
+To actually use the cluster the `kubectl` command is used.  This run locally on your machine and communicated with the cluster API endpoint.  `kubectl` can control all Kubernetes resources to create, manage, and delete.
 
-There are also other mechanisms to create a Kubernetes cluter, like [kubespray](https://github.com/kubernetes-sigs/kubespray) and [kops](https://github.com/kubernetes/kops).
+There are also other mechanisms to create a Kubernetes cluster, like [kubespray](https://github.com/kubernetes-sigs/kubespray) and [kops](https://github.com/kubernetes/kops).
 
 
 ### Installing `kubectl`
 
 The recommended way to configure and manage your Kubernetes cluster is `kubectl`.  Most distros have `kubectl` available in their repositories, or you can download the code from [Github](https://github.com/kubernetes/kubernetes/tree/master/pkg/kubectl) and compile and install from the source code.
 
-The command stores its configuration in `$HOME/.kube/config`, which contains information for all the K8s endpoints you might use.  In it are cluster defintions (IP endpoints), credentials, and contexts.  The contexts is a combination of cluster and user credentials, which can be passed in the command line or the context can be switched with 
+The command stores its configuration in `$HOME/.kube/config`, which contains information for all the K8s endpoints you might use.  In it are cluster definitions (IP endpoints), credentials, and contexts.  The contexts is a combination of cluster and user credentials, which can be passed in the command line or the context can be switched with 
 
 ```bash
 kubectl config use-context foobar
@@ -52,7 +52,7 @@ Requirements:
 
 Instructions for installing `gcloud` can be found [here](https://cloud.google.com/sdk/docs/install#linux).
 
-The GKE quickstart guide can be found [here](https://cloud.google.com/kubernetes-engine/docs/quickstart).
+The GKE quick start guide can be found [here](https://cloud.google.com/kubernetes-engine/docs/quickstart).
 
 Then to create your first cluster in GKE:
 
@@ -66,7 +66,7 @@ kubectl get nodes
 
 The first command creates the cluster with the name _linuxfoundation_.  The next command lists the cluster. The final command lists the nodes of the cluster. Installing `gcloud` automatically installs `kubectl` as well.
 
-Once done witht the cluster, __delete it or you will be charged__.
+Once done with the cluster, __delete it or you will be charged__.
 
 ```bash
 gcloud container clusters delete linuxfoundation
@@ -126,7 +126,7 @@ Building the cluster with `kubeadm` gives the option to upgrade using `kubeadm u
 
 Some of the command for `kubeadm upgrade`:
 
-- `plan` checks the installed version against the newest version to verify upgradability
+- `plan` checks the installed version against the newest version to verify upgradeability
 - `apply` upgrades the first cp node to the version specified
 - `diff` shows the differences applied in an upgrade. It is similar to `apply --dry-run`.
 - `node` lets local kubelet configuration to be updated on the worker nodes, or secondary cp nodes. Also calls a `phase` command to step through upgrading.
@@ -144,18 +144,18 @@ More in-depth documentation about the upgrade process can be found in the [offic
 
 ### Installing a Pod network
 
-Prior to initialization of a cluster, a network needs to be considered and IP conficts avoided.   There are many options for Pod networking. Many projects mention Container Network Interface (or CNI, another CNCF project) as a way to handle deployments and cleaning up network resources.
+Prior to initialization of a cluster, a network needs to be considered and IP conflicts avoided.  There are many options for Pod networking. Many projects mention Container Network Interface (or CNI, another CNCF project) as a way to handle deployments and cleaning up network resources.
 
 #### Calico
 
-A flat layer 3 network that communicates without IP encapsulation. It is used in production with many orchestration tools.  It has a simple and flexible networking model and scales well to large environments.  Canal is another option, that is part of the same project, which can integrate with Flannel.  Calico also allows impleneting network policies.  
+A flat layer 3 network that communicates without IP encapsulation. It is used in production with many orchestration tools.  It has a simple and flexible networking model and scales well to large environments.  Canal is another option, that is part of the same project, which can integrate with Flannel.  Calico also allows implementing network policies.  
 
 [Project webpage](https://www.tigera.io/project-calico/)
 
 
 #### Flannel
 
-A layer 3 IPv4 network between cluster nodes. Ithas a long history with Kuberentes as it as developed by CoreOS.  Flannel focuses on traffic between hosts, not the local container configuration for networking. `flanneld` agents sit on each node to allocate subnet leases to the host.  It can be configured after deployment but it is easier before Pods are added.
+A layer 3 IPv4 network between cluster nodes. It has a long history with Kubernetes as it as developed by CoreOS.  Flannel focuses on traffic between hosts, not the local container configuration for networking. `flanneld` agents sit on each node to allocate subnet leases to the host.  It can be configured after deployment but it is easier before Pods are added.
 
 [Project Github](https://github.com/flannel-io/flannel)
 
@@ -185,7 +185,7 @@ Usually used as an add-on for CNI enabled clusters.
 
 Kubernetes is like any other application you would install on a server so the the usual configuration management tools (Terraform, Ansible, Chef, Puppet, etc.) can be used for installation.
 
-The best way to learn about installing Kubernetes manually is with Kelsey Hightower's [Kuberenetes the Hard Way](../hard-way/about).
+The best way to learn about installing Kubernetes manually is with Kelsey Hightower's [Kubernetes the Hard Way](../hard-way/about).
 
 #### kubespray
 
@@ -225,9 +225,9 @@ Once ready to deploy a cluster of servers there are a some decision points
 - What networking solution? Is an overlay needed?
 - High availability for the head nodes?
 
-To choose the best option, the Kuberenetes [_Getting Started_](https://kubernetes.io/docs/setup/) docs are a good resource.
+To choose the best option, the Kubernetes [_Getting Started_](https://kubernetes.io/docs/setup/) docs are a good resource.
 
-In most cases the Kuberentes components will run as `systemd` unit files as that has become the dominant init system for Linux OSes.  They could also be run by a kubelet on the head node (kubeadm).
+In most cases the Kubernetes components will run as `systemd` unit files as that has become the dominant init system for Linux OSes.  They could also be run by a kubelet on the head node (kubeadm).
 
 
 ### Main deployment configurations
@@ -237,9 +237,9 @@ There are four main deployment configurations.
 - __Single node__ - all components run on the same server, Good for testing and development, not well suited for production.
 - __Single head node, multiple workers__ - Typically has an etcd instance running on the head node with the API, scheduler, and controller-manager.
 - __Multiple head nodes with HA, multiple workers__ - This type of configuration adds more durability to the cluster. The API server is fronted by a load balancer, scheduler and controller-manager elect a leader (configured by flags). etcd can still run as a single node.
-- __HA etcd, HA head nodes, multiple workers__ - This is the most advanced and robust Kuberentes setup.  etcd would also run as a true cluster on nodes separate from th head nodes.
+- __HA etcd, HA head nodes, multiple workers__ - This is the most advanced and robust Kubernetes setup.  etcd would also run as a true cluster on nodes separate from th head nodes.
 
-A tool called Kubernetes Federation also offers high availability.  It joins multiple clsuters together with a common cp to let resources move between clusters administrtively or due to failure.  It has some issues but there is hope [v2](https://github.com/kubernetes-sigs/kubefed) will be a better product.
+A tool called Kubernetes Federation also offers high availability.  It joins multiple clusters together with a common cp to let resources move between clusters administratively or due to failure.  It has some issues but there is hope [v2](https://github.com/kubernetes-sigs/kubefed) will be a better product.
 
 
 ### `systemd` unit file for Kubernetes
@@ -264,14 +264,14 @@ In any of the mentioned configurations, some components will run as standard sys
 ...
 ```
 
-Familiarity with the configuration of each components and the options available come with more practive.  Expect the option to change as Kubernetes continues to rapidly develop.
+Familiarity with the configuration of each components and the options available come with more practice.  Expect the option to change as Kubernetes continues to rapidly develop.
 
-An example, the API serve is a highly configurable component. Here's the [documention for configuring](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) it.
+An example, the API serve is a highly configurable component. Here's the [documentation for configuring](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) it.
 
 
 ### Using Hyperkube
 
-Instead of system deamons, the API server, scheduleer, and controller-manager can be run as containers.  This is how `kubeadm` runs them. Similar to minikube, hyperkube runs as an all in one binary [which Google hosts](https://console.cloud.google.com/gcr/images/google-containers/GLOBAL/hyperkube) as a container (this may require adding a new repository so Docker can find and download the image).
+Instead of system deamons, the API server, scheduler, and controller-manager can be run as containers.  This is how `kubeadm` runs them. Similar to minikube, hyperkube runs as an all in one binary [which Google hosts](https://console.cloud.google.com/gcr/images/google-containers/GLOBAL/hyperkube) as a container (this may require adding a new repository so Docker can find and download the image).
 
 Using hyperkube runs a kubelet as a system daemon and then reads manifests for instructions on how to run the other components.  Running hyperkube is also a good way to begin learning the different configuration flags of the components that form the cp.  You can get more information on these flags by downloading the image and running the help commands:
 
@@ -315,7 +315,7 @@ ssh -i <PEM key name> <user>@<IP address>
 2. `wget` the course materials.
 
 :::important
-Check the [course material page](https://training.linuxfoundation.org/cm/LFS258/) before runnign to make sure you are downloading the latest tarball
+Check the [course material page](https://training.linuxfoundation.org/cm/LFS258/) before running to make sure you are downloading the latest tarball
 :::
 
 ```bash
@@ -347,7 +347,7 @@ apt-get install -y vim
 apt-get install -y docker.io
 ```
 
-6. Add a new repo for Kubernetes. Create the file and add an entry for the main repo for the distro we are using (Ubunutu in my case).  Even though we are using Ubuntu 18.04, we'll use the `kubernetes-xenial` repo. Also include the keyword `main`  Note there are four sections to the entry.
+6. Add a new repo for Kubernetes. Create the file and add an entry for the main repo for the distro we are using (Ubuntu in my case).  Even though we are using Ubuntu 18.04, we'll use the `kubernetes-xenial` repo. Also include the keyword `main`  Note there are four sections to the entry.
 
 Creating the file:
 
@@ -381,7 +381,7 @@ apt-get install -y kubeadm=1.21.1-00 kubelet=1.21.1-00 kubectl=1.21.1-00
 apt-mark hold kubelet kubeadm kubectl
 ```
 
-10. Decide on a pod network.  As discussed previously, this should take into account the anticiapted demands on the cluster.  There can only be one pod network per cluster, although there is a project, CNI-genie that is trying to change that.
+10. Decide on a pod network.  As discussed previously, this should take into account the anticipated demands on the cluster.  There can only be one pod network per cluster, although there is a project, CNI-genie that is trying to change that.
 
 The network needs to allow container-to-container, pod-to-pod, pod-to-service, and external-to-service communication. Docker uses host-private networking (`docker0` virtual bridge and `veth` interfaces) which requires being on the host to communicate.
 
@@ -560,7 +560,7 @@ The second like should fail due to the lack of configuration and the 3rd should 
 kubectl get nodes
 ```
 
-2. Look at the details on the __cp__ node. Notice that `Taints`. The cp does not run non-infrastructure pods by default for secirity and resource contention.
+2. Look at the details on the __cp__ node. Notice that `Taints`. The cp does not run non-infrastructure pods by default for security and resource contention.
 
 ```bash
 kubectl describe node k8scp
@@ -697,9 +697,9 @@ ports:
 
 There are a few subcommands that will update the configuration. `apply`, `edit`, and `path` all do it non-disruptively.
 
-`apply` does a 3-way diff on the previous, current, and supplied input to determine wwhat changes to make.  Fields that are not metioned will not be touched.
+`apply` does a 3-way diff on the previous, current, and supplied input to determine what changes to make.  Fields that are not mentioned will not be touched.
 
-`edit` gets the current configuration, opens an editor, and then runs an `apply` on the made chnages.
+`edit` gets the current configuration, opens an editor, and then runs an `apply` on the made changes.
 
 `patch` can be used to update API objects in place.
 
@@ -715,7 +715,7 @@ Then check to make sure the deployment and pod status show that they are ready.
 kubectl get deploy,pod
 ```
 
-12. Now tyry to expose the web server again.
+12. Now try to expose the web server again.
 
 ```bash
 kubectl expose deployment/nginx
@@ -732,7 +732,7 @@ kubectl get ep nginx
 10.96.14.131
 192.168.157.133:80
 
-13. Determine which node the container is running on.  Log into that node and run a `tcpdump` (this may need to be installed) to see the traffic on `tunl0`.  While the `tcpdump` is still running use `cutl` to send an HTTP request.
+13. Determine which node the container is running on.  Log into that node and run a `tcpdump` (this may need to be installed) to see the traffic on `tunl0`.  While the `tcpdump` is still running use `curl` to send an HTTP request.
 
 On the __cp node__:
 
@@ -843,6 +843,6 @@ kubectl delete svc nginx
 ## Knowledge check
 
 - `kubeadm` is used to __create a cluster and add nodes__
-- The main binary for working withobject of a Kubernetes cluster is __`kubectl`__
+- The main binary for working with object of a Kubernetes cluster is __`kubectl`__
 - There can be __1__ pod network per cluster
 - The `~/.kube/config` file contains __endpoints__, __SSL keys__, and __contexts__.
