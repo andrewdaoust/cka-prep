@@ -30,6 +30,6 @@ printenv | grep <filter text>
 ## Install a binary
 
 ```bash
-chomd +x <binary to install>
+chmod +x <binary to install>
 mv <binary to install> /usr/local/bin
 ```

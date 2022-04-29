@@ -11,6 +11,6 @@ title: chmod
 To install a binary for use in the command line do the following
 
 ```bash
-chomd +x <binary to install>
+chmod +x <binary to install>
 mv <binary to install> /usr/local/bin
 ```
