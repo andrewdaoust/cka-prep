@@ -23,7 +23,7 @@ on the root of this repo, for example, gets
 239M    .
 ```
 
-If you include the `-a` flag you will get output for all files, not just directories.  You can also specify a path after a command to get the disk usage from that directory.  The `-c` flag will give you a grand totalat the end.
+If you include the `-a` flag you will get output for all files, not just directories.  You can also specify a path after a command to get the disk usage from that directory.  The `-c` flag will give you a grand total at the end.
 
 ```bash
 du -hac -d 1 /<path to>/cka-prep

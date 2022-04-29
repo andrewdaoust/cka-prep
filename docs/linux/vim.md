@@ -3,7 +3,7 @@ id: vim
 title: vim
 ---
 
-To insert text, go into inser mode with the `i` key.  To exit insert mode, hit escape.
+To insert text, go into insert mode with the `i` key.  To exit insert mode, hit escape.
 
 To save your document and exit `vim` write `:wq`.
 

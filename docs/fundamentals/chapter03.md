@@ -771,7 +771,7 @@ kubectl get deployment nginx
 kubectl get ep nginx
 ```
 
-Now find the oldest deployment running and deleteit so that it is recreated.
+Now find the oldest deployment running and delete it so that it is recreated.
 
 ```bash
 kubectl get pod -o wide

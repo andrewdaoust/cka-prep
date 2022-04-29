@@ -10,7 +10,7 @@ title: API Objects
 - Explore API versions
 - Discuss rapid change and development
 - Deploy and configure an application using a Deployment
-- Examine primatives for a self-healing application
+- Examine primitives for a self-healing application
 - Scale an application
 
 

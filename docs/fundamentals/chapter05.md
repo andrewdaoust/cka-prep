@@ -157,7 +157,7 @@ kubectl config view
 
 Running this command will show config pulled from `~/.kube/config`.  In the [previous section](./chapter05.md#manage-api-resources-with-kubectl), if you ran the command with additional verbosity, you'd see something like `Config loaded from file ~/.kube/config` in the logging.
 
-Without the cert authority, key, and cert from the kube config file, only insecure `curl` commands would work, which severly limits how much you can interact with the cluster.  In the upcoming lab we will use `curl` and TLS to access the cluster.
+Without the cert authority, key, and cert from the kube config file, only insecure `curl` commands would work, which severely limits how much you can interact with the cluster.  In the upcoming lab we will use `curl` and TLS to access the cluster.
 
 
 ### `~/.kube/config`
@@ -281,12 +281,11 @@ metadata:
 
 ### API resources with `kubectl`
 
-Here is a list of all objects that are exposed by `kubectl`.  Expect this list to change as Kuberentes continues to mature.
+Here is a list of all objects that are exposed by `kubectl`.  Expect this list to change as Kubernetes continues to mature.
 
 - `all`
 - `certificatesigningrequests` or `csr`
 - `clusterrolebindings`
-- `clusterroles`
 - `clusterroles` which is only available to federation apiservers
 - `componentstatuses` or `ca`
 - `configmaps` or `cm`

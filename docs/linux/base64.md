@@ -13,7 +13,7 @@ base64 [OPTIONS] [INPUT] [OUTPUT]
 
 The two most important option flags are `-d`/`--decode` for decoding and `-e`/`--encode` for encoding.
 
-Some other use falgs are:
+Some other use flags are:
 
 - `-n`, `--noerrcheck` to skip the usual error checking at the time of decoding.
 - `-u`, `--help` for info on the usage of the command

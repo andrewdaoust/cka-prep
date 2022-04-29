@@ -4,7 +4,7 @@ title: Follow-up Items
 position: 18
 ---
 
-Being new to many of these topic, there is more to learn than just Kubernetes.  Tracking topics I want to follow up on because I'm unfamilair or I just want to gain a deeper understanding.
+Being new to many of these topic, there is more to learn than just Kubernetes.  Tracking topics I want to follow up on because I'm unfamiliar or I just want to gain a deeper understanding.
 
 
 ## Chapter 2
@@ -37,7 +37,7 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [supervisord](./chapter04.md#worker-nodes)
 - [NUMA](./chapter04.md#kubelet)
     - [Wikipedia](https://en.wikipedia.org/wiki/Non-uniform_memory_access)
-- [DeltFIFO queue](./chapter04.md#operators)
+- [DeltaFIFO queue](./chapter04.md#operators)
 - [Golang work queues](./chapter04.md#operators)
 - [IPC](./chapter04.md#pods)
 - [loopback interface](./chapter04.md#pods)
