@@ -36,3 +36,13 @@ Starting in `v1.16`, depreciated API object versions respond with an error rathe
 ### `v1` API group
 
 The `v1` API group is no longer a single group, but a collection of groups for each main object category.
+
+So far, through the lab exercises, we have seen a few objects from the `v1` group.  Here's a recap of some of them:
+
+#### Node
+
+#### Service account
+
+#### Resource Quota
+
+#### Endpoint
