@@ -5,6 +5,7 @@
   "dictionaries": [],
   "words": [
     "alloc",
+    "Autoscaler",
     "cpus",
     "deamons",
     "distro",
@@ -43,8 +44,10 @@
     "XDELETE",
     "XGET",
     "XPOST",
+    "apiregistration",
     "apiserver",
     "apiservers",
+    "apiservices",
     "calicoctl",
     "certificatesigningrequests",
     "cgroups",

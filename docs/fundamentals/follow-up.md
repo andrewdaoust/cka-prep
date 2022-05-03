@@ -61,6 +61,11 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [TLS](./chapter05.md#access-from-outside-the-cluster)
 
 
+## Chapter 6
+
+- [Idempotent](./chapter06.md#jobs)
+
+
 ## Additional
 
 - CIDR

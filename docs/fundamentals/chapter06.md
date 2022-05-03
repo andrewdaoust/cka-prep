@@ -141,7 +141,7 @@ You can `curl` each URI to get more information on each like which verbs are ava
 
 ### Deploying an application
 
-Using `kubectl create` we can quickly deploy an application to the cluster. We have looked at the Pods created running the application `nginx`. If we look closer though, we will see a Deployment was created, whcih manages RepliceSets, which in turn control the Pod.
+Using `kubectl create` we can quickly deploy an application to the cluster. We have looked at the Pods created running the application `nginx`. If we look closer though, we will see a Deployment was created, which manages ReplicaSets, which in turn control the Pod.
 
 #### Deployment
 
@@ -150,7 +150,7 @@ This is a controller that manges the sate of ReplicaSets.  This higher level con
 
 #### ReplicaSet
 
-These orchestrate the life cycles and updates of Pods.  ReplicaSets are new versinos of Replication Controllers, the only difference being selector support.
+These orchestrate the life cycles and updates of Pods.  ReplicaSets are new versions of Replication Controllers, the only difference being selector support.
 
 
 #### Pod
@@ -170,4 +170,69 @@ As usual, you get all the normal CRUD operation with `kubectl`
 kubectl get daemonsets
 kubectl get ds
 ```
+
+### StatefulSets
+
+A StatefulSet is an API object to manage stateful applications.  Pods deployed using StatefulSets use the same podSpec but they differ from a Deployment in that StatefulSets consider each Pod as unique and provides ordering in the deployment of Pods.  To track each Pod as a unique object, the controllers create an identity for the Pod composing of stable storage, stable network identity, and an ordinal.  This identity remains with the node, regardless of which node the Pod is running on at a given time.
+
+By default, the deployment scheme is sequential, starting at 0 (e.g. `app-0`, `app-1`, `app-2`, etc).  The next Pod is not launched until the previous reaches a running, steady state, not in parallel.
+
+Since Kubernetes v1.9, StatefulSets have been stable.
+
+
+### Autoscaling
+
+In the autoscaling group, there is the __Horizontal Pod Autoscaler (HPA)__.  They automatically scale Replication Controllers, ReplicaSets, or Deployments to meet the target CPU usage (50% by default). The kubelet checks the usage every 30 seconds and the usage is retrieved by a Metrics Server API call every minute. The HPA checks the Metrics Server every 30 seconds as well.  If a Pod is added or removed, the HPA waits 3 minutes.  Other metrics are retrievable through REST calls. The autoscaler does not collect the metrics, but instead makes use of the aggregated information to increase and decrease replicas to match configuration.
+
+The __Cluster Autoscaler (CA)__ adds and removes cluster nodes. This is based on inability to deploy Pods or low utilization on a node for at least 10 minutes. Using the CA allows for dynamic request of resources from the cloud provider and minimizes cost for nodes not being used.  If using the CA, nodes should be added and removed with `cluster-autoscaler-` commands. Scale up and down is checked every 10 seconds and decisions are made every 10 minutes.  If a scale down fails, the group is rechecked after 3 minutes, with the failing node being eligible in 5.  The time to allocate a new node is mostly dependent on the cloud provider.
+
+There is another project, the __Vertical Pod Autoscaler__, which will adjust the amount of CPU and memory requested by Pods. This is still under development.
+
+
+### Jobs
+
+Jobs are part of the `batch` API group and are used to run a defined number of Pods to completion. If a Pod fails, it is restarted until the number of completions is met.
+
+Jobs can be seen as a way to do batch processing in Kubernetes but it can also be used for one-off Pods.  A Job spec will have a parallelism and completion key, and if omitted they are set to 1. If present, the parallelism number determines the number of Pods that can run concurrently. The completion number will set the number of Pods that need to run successfully for the Job to be considered complete. There are several patterns of implementation for Jobs, like traditional work queues.
+
+Here is a simple example of a Job config:
+
+```yaml title="job.yaml"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+  backoffLimit: 4
+```
+
+There are also Cronjobs, which work similar to Linux jobs and use the same time syntax. Because there are cases where a job could not run during a time period, or because it could run twice, the requested Pod should be idempotent. An optional `.spec.concurrencyPolicy` can be supplied to determine how to handle existing jobs if the time segment expires.  If it is set to `Allow` (which is the default), another concurrent job will be run. If it is set to `Forbid` the current job continues and the new job is skipped. If `Replace` is the value, the current job is cancelled and a new one takes its place.
+
+
+### RBAC
+
+The `rbac.authorization.k8s.io` group has four important resources:
+- ClusterRole
+- Role
+- ClusterRoleBinding
+- RoleBinding
+
+They are used for Role-based access control (RBAC). These resources allow us to define Roles in the cluster and associate users with the roles.  For example, we could create roles with some of the following permissions:
+
+- Read-only access to Pods in a specific namespace
+- Access to create deployments, but not services
+
+We will come back to RBAC when we discuss security.
+
+
+## Lab Exercises
+
+### Lab 6.1 - RESTful API access
 
