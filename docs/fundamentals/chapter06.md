@@ -236,3 +236,253 @@ We will come back to RBAC when we discuss security.
 
 ### Lab 6.1 - RESTful API access
 
+This lab will continue focusing on access to the cp of the cluster. One authentication method is the use of a `Bearer token`.  We'll work with one and also deploy a local proxy for application-level Kubernetes API access.
+
+We'll again us `curl` to make insecure API requests.  We need to find the IP and port, and then the token so we can retrieve the cluster data using REST calls. By default, most of the information is restricted, but changes to the authentication policy can allow more access.
+
+1. First we will find the IP and port number. On the cp node, run
+
+```bash
+kubectl config view
+```
+
+and at the top you should see something like 
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://k8scp:6443
+  name: kubernetes
+```
+
+2. Next we will find the bearer token. We can do this by listing secrets in all namespaces or just the default one.
+
+```bash
+kubectl get secrets -A
+kubectl get secrets
+```
+
+Listing the secrets in all namespaces you will see a secret for each of the cluster's controllers.
+
+Now we can look at the details of the secret in the `default` namespace.
+
+```bash
+kubectl describe secret default-token-<postfix>
+```
+
+Now extract the token from the `token` field from the `describe` output.
+
+```bash
+export token=$(kubectl describe secret default-token-<postfix> | grep ^token | cut -f7 -d ' ')
+echo $token
+```
+
+3. Now we can test to try and get basic information from the cluster.
+
+```bash
+curl https://k8scp:6443/apis --header "Authorization: Bearer $token" -k
+```
+
+We use the `-k` flag to avoid passing a cert.
+
+Now try the API v1 group endpoint.
+
+```bash
+curl https://k8scp:6443/api/v1 --header "Authorization: Bearer $token" -k
+```
+
+This should return successfully. Now try to list the namespaces on the cluster.
+
+```bash
+curl https://k8scp:6443/api/v1/namespaces --header "Authorization: Bearer $token" -k
+```
+
+This should fail with an error. The error message tells us the request was seen as `system:serviceaccount` which does not have RBAC authorization to list all namespaces in the cluster.
+
+```json
+{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "namespaces is forbidden: User \"system:serviceaccount:default:default\" cannot list resource \"namespaces\" in API group \"\" at the cluster scope",
+  "reason": "Forbidden",
+  "details": {
+    "kind": "namespaces"
+  },
+  "code": 403
+}
+```
+
+4. Pods also can make use of included certs. They are automatically made available in `/var/run/secrets/kubernetes.io/serviceaccount/` on the Pod filesystem.  We will deploy a simple Pod and then we can confirm the token file on the container is the same as what we set in thr `token` variable.
+
+```bash
+kubectl run -it busybox --image=busybox --restart=Never
+```
+
+Then on the shell of the container run
+
+```bash
+ls /var/run/secrets/kubernetes.io/serviceaccount/
+cat /var/run/secrets/kubernetes.io/serviceaccount/token
+exit
+```
+
+Then delete to Pod to free up resources.
+
+```bash
+kubectl delete pod busybox
+```
+
+
+### Lab 6.2 - Using the proxy
+
+Now we will access the API vis a proxy.  The proxy can run on a node or from within a Pod using a sidecar. We will deploy a proxy listening on a loopback address  and then use `curl` to access the cluster. 
+
+For troubleshooting, if `curl` works, but not from outside the cluster, we have narrowed down the issue to authentication/authorization and not issues further down in the API ingestion process.
+
+First, we can view how to use the `proxy` command in `kubectl`.
+
+```bash
+kubectl proxy --help
+```
+
+And then we can actually create the proxy and set it to the background.  make note of the process ID so we can stop it later.
+
+```bash
+kubectl proxy --api-prefix=/ &
+```
+
+:::note
+The process ID will be the first line of the response followed by the endpoint for the endpoint that proxy will be listening on. In this example, it is `18050`
+
+```bash
+[1] 18050
+Starting to serve on 127.0.0.1:8001
+```
+:::
+
+Now we can use `curl` as we did before in the last lab section, this time without the token.
+
+```bash
+curl http://127.0.0.1:8001/api/
+curl http://127.0.0.1:8001/api/v1/namespaces
+```
+
+Notice that this time, when you `curl` the endpoint to  list the namespaces, it works. This is because the proxy is making the request on our behalf and has the correct permissions.
+
+Finally we can turn the proxy down using the process ID we took note of before.
+
+```bash
+kill 18050
+```
+
+
+### Lab 6.3 - Working with Jobs
+
+While most API objects are deployed so that they are continually available, sometimes you may have ones that you want to run a set number of times (a `Job`), or on a regular basis (a `CronJob`).
+
+First lets create a Job.  This one is very simple, as it just sleeps for three seconds then stops.
+
+```
+vim job.yaml
+```
+
+```yaml title="job.yaml"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sleepy
+spec:
+  template:
+    spec:
+      containers:
+      - name: resting
+        image: busybox
+        command: ["/bin/sleep"]
+        args: ["3"]
+      restartPolicy: Never
+```
+
+```bash
+kubectl create -f job.yaml
+kubectl get job
+kubectl describe job sleepy
+kubectl get job sleepy -o yaml
+```
+If you run the `get jobs` command fast enough you will see it has not completed yet. Wait 3 seconds, and you should see the `COMPLETIONS` change to `1/1`.
+
+The if you look at the config info for the job, we can see the three main parameters that affect how a Job will run.  In the output you should see `backoffLimit`, `completions`, and `parallelism` fields.  Let's delete the existing Job as it will just continue to `AGE` in a completed state.
+
+```bash
+kubectl delete job sleepy
+```
+
+Now let's edit the `job.yaml` file. Within the `spec` section, add a line for that says `completions: 5`. Edit the YAML with `vim`, it should look like this:
+
+```yaml title="job.yaml"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sleepy
+spec:
+  completions: 5   # <-- Add this line
+  template:
+    spec:
+      containers:
+      - name: resting
+        image: busybox
+        command: ["/bin/sleep"]
+        args: ["3"]
+      restartPolicy: Never
+```
+
+This will make the Job need to complete 5 times before it is completed.
+
+```bash
+kubectl create -f job.yaml
+kubectl get jobs.batch
+kubectl get pods
+```
+
+If you continue to run `get pods` you will see more `sleepy` pods come up as the previous ones complete until all 5 are completed. If you continue to run `get jobs` you will see `COMPLETIONS` start as `0/5` and end at `5/5`.
+
+Then delete the job again.
+
+```bash
+kubectl delete job sleepy
+```
+
+Next we will add the `parallelism` parameter to the yaml spec file and recreate the job again. Again, edit the YAML with vim, it should look like this
+
+```yaml title="job.yaml"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sleepy
+spec:
+  completions: 5   
+  parallelism: 2   # <-- Add this line
+  template:
+    spec:
+      containers:
+      - name: resting
+        image: busybox
+        command: ["/bin/sleep"]
+        args: ["3"]
+      restartPolicy: Never
+```
+
+Then create the Job.
+
+```bash
+kubectl create -f job.yaml
+kubectl get jobs
+kubectl get pods
+```
+
+This time when you `get pods` you will see 2 `sleepy` Pods are running concurrently. When you `get jobs` you should again see it start at `0/5` and end in `5/5` `COMPLETIONS`.
+
+TODO: continue at step 11
