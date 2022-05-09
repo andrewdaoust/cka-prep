@@ -382,6 +382,8 @@ kill 18050
 
 ### Lab 6.3 - Working with Jobs
 
+#### Create a Job
+
 While most API objects are deployed so that they are continually available, sometimes you may have ones that you want to run a set number of times (a `Job`), or on a regular basis (a `CronJob`).
 
 First lets create a Job.  This one is very simple, as it just sleeps for three seconds then stops.
@@ -485,4 +487,162 @@ kubectl get pods
 
 This time when you `get pods` you will see 2 `sleepy` Pods are running concurrently. When you `get jobs` you should again see it start at `0/5` and end in `5/5` `COMPLETIONS`.
 
-TODO: continue at step 11
+Now let's add the `activeDeadlineSeconds` to the job spec and set it to `15`.  The Job and all Pods will now run for 15 seconds, then stop.  We will also increase the sleep time to 5 so it doesn't expire on it's own.
+
+```bash
+vim job.yaml
+```
+
+```yaml title="job.yaml"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sleepy
+spec:
+  completions: 5   
+  parallelism: 2   
+  activeDeadlineSeconds: 15  # <-- Add this line
+  template:
+    spec:
+      containers:
+      - name: resting
+        image: busybox
+        command: ["/bin/sleep"]
+        args: ["5"]   # <-- Update this line
+      restartPolicy: Never
+```
+
+Then delete the Job and recreate it.
+
+```bash
+kubectl delete job sleepy
+kubectl create -f job.yaml
+kubectl get jobs
+```
+
+You should see the Job run and get to `3/5` or `4/5` completions within the 15 second allowed runtime and then see it ages without any more completions.
+
+Get the YAML output for the job and take a look at the `status` section at the bottom.
+
+```bash
+kubectl get job sleepy -o yaml
+```
+
+```yaml
+status:
+  conditions:
+  - lastProbeTime: "2022-05-09T14:54:54Z"
+    lastTransitionTime: "2022-05-09T14:54:54Z"
+    message: Job was active longer than specified deadline
+    reason: DeadlineExceeded
+    status: "True"
+    type: Failed
+  failed: 1
+  startTime: "2022-05-09T14:54:39Z"
+  succeeded: 4
+  uncountedTerminatedPods: {}
+```
+
+See the the Job failed due to `DeadlineExceeded` because the `Job was active longer than specified deadline`.
+
+Finally delete the Job.
+
+```bash
+kubectl delete jobs.batch sleepy
+```
+
+
+#### Create a CronJob
+
+CronJobs create watch loops to then create Jobs on your behalf when the time is true.  To start let's copy our `job.yaml` file and then edit it in `vim`.
+
+```bash
+cp job.yaml cronjob.yaml
+vim cronjob.yaml
+```
+
+```yaml title="cronjob.yaml"
+apiVersion: batch/v1beta1  # Update to v1beta1 from v1
+kind: CronJob              # Update to CronJob kind
+metadata:
+  name: sleepy
+spec:
+  schedule: "*/2 * * * *"  # Gets a Linux style cronjob syntax
+  jobTemplate:             # New jobTemplate and spec fields. Existing template tabbed in twice below the new spec field
+    spec:
+      template:
+        spec:
+          containers:
+          - name: resting
+            image: busybox
+            command: ["/bin/sleep"]
+            args: ["5"]
+          restartPolicy: Never
+```
+
+Now let's create the job. It will take 2 minutes for the CronJob to generate a new Job.
+
+```bash
+kubectl create -f cronjob.yaml
+kubectl get cronjobs.batch
+kubectl get jobs.batch
+```
+
+You should see the CronJob has not run yet and not Jobs have been created if you run the `get` commands before the 2 minute mark.
+
+Wait two minutes and run the `get` commands again.
+
+You should see the `LAST SCHEDULE` change and a list of complete jobs for them, respectively.
+
+Now let's change the CronJob to terminate any Jobs that run for more than 10 seconds and make the `sleep` run for 30 seconds to ensure it fails.
+
+```bash
+vim cronjob.yaml
+```
+
+```yaml title="cronjob.yaml"
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: sleepy
+spec:
+  schedule: "*/2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          activeDeadlineSeconds: 10  # Added this line
+          containers:
+          - name: resting
+            image: busybox
+            command: ["/bin/sleep"]
+            args: ["30"]   # Updated to 30 seconds
+          restartPolicy: Never
+```
+
+Then delete the CronJob and recreate it and run through the get commands like before.
+
+```bash
+kubectl delete cronjob sleepy
+kubectl create -f cronjob.yaml
+kubectl get cronjobs.batch
+kubectl get jobs.batch
+```
+
+You should see that the Jobs never hit a complete state.
+
+Delete the CronJob once you are done.
+
+```bash
+kubectl delete cronjob sleepy
+```
+
+
+## Knowledge check
+
+- All API versions should __not__ be considered stable
+- __Deployments__ are the suggested object for deploying and scaling applications
+- The following is Kubernetes objects from smallest to largest: __Container, Pod, ReplicaSet, Deployment__
+- A DaemonSet runs __one__ Pod per node
+- Deployments handle scaling of an application based on administrative config.  __Horizontal Pod Autoscaling__ scales resources based on CPU usage (50% by default)
+- Jobs and CronJobs belong to the __batch__ API group

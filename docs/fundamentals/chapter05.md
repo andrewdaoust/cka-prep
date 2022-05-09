@@ -547,4 +547,3 @@ kubectl delete po curlpod
 - __`apiVersion`__, __`kind`__, __`metadata`__, and __`spec`__ bust be included in a pod template
 - __`--all-namespaces`__ should be appended to commands to affect every namespace with `kubectl`
 - Objects are __not__ restricted to a single namespace
-- 
