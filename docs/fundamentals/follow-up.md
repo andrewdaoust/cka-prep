@@ -66,6 +66,12 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [Idempotent](./chapter06.md#jobs)
 
 
+## Chapter 6
+
+- [SELinux](./chapter07.md#securitycontext)
+- [AppArmor](./chapter07.md#securitycontext)
+
+
 ## Additional
 
 - CIDR
