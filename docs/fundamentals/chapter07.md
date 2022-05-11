@@ -242,7 +242,7 @@ Sets the amount of time to wait for a `SIGTERM` to run before a `SIGKILL` is use
 
 ### Deployment configuration status
 
-TODO: Continue here, left output for later convenience
+Now, let's take a look at the `status` section of the output for our Deployment object.
 
 ```yaml
   status:
@@ -265,3 +265,197 @@ TODO: Continue here, left output for later convenience
     replicas: 1
     updatedReplicas: 1
 ```
+
+Some sections to note in the `status` are the `availableReplicas` and `observedGeneration` fields.  The `availableReplicas` indicates how many replicas were configured by the ReplicaSet.  This is then later compared to `readyReplicas` to determine if all have been fully created without error.
+
+The `observedGeneration` parameter shows how often the deployment has been updated, which can be used to understand the rollout and rollback situation of the deployment.
+
+
+### Scaling and rolling updates
+
+The kube-apiserver allows most configuration settings to be updated, however there are some that are immutable which can differ depending on the version of Kubernetes deployed.
+
+A more common update is scaling the number of replicas for a Deployment.  You could in theory also scale a Deployment to 0 replicas, leaving just a ReplicaSet and a Deployment, which behind the scenes is what happens when a Deployment is deleted. As an example, let's scale the Nginx deployment we created earlier.
+
+```bash
+kubectl scale deploy/dev-web --replicas=4
+```
+
+For immutable values, we can edit the deployment and trigger an update.  Again, using the example of our Nginx deployment we could do
+
+```bash
+kubectl edit deployment dev-web
+```
+
+This would open up a text editor and you could make a change, like for example the image version.
+
+```yaml
+...
+      containers:
+      - image: nginx:1.8   # <-- Update this to an older version
+        imagePullPolicy: IfNotPresent
+        name: nginx
+...
+```
+
+The `edit` command then triggers the update of the Deployment. While the Deployment shows its age as the original creation time, inspecting the Pods would show that they had been recently created.
+
+
+### Deployment rollbacks
+
+Some previous ReplicaSets and Deployments are kept in the case a rollback is needed.  The number kept is configurable and changes version to version.  Let's take a loot at how rollbacks can be made.
+
+```bash
+kubectl create deploy ghost --image=ghost
+kubectl get deploy ghost -o yaml
+```
+
+This is what the deployment should look like:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2022-05-11T16:17:57Z"
+  generation: 1
+  labels:
+    app: ghost
+  name: ghost
+  namespace: default
+  resourceVersion: "296422"
+  uid: 985f8c5a-8040-4c00-81b9-833dd03bde0a
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: ghost
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ghost
+    spec:
+      containers:
+      - image: ghost
+        imagePullPolicy: Always
+        name: ghost
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2022-05-11T16:18:15Z"
+    lastUpdateTime: "2022-05-11T16:18:15Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2022-05-11T16:17:57Z"
+    lastUpdateTime: "2022-05-11T16:18:15Z"
+    message: ReplicaSet "ghost-5c7f765cdc" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
+```
+
+If an update were to fail, you can roll back to a previous version with a `kubectl rollout undo`
+
+```bash
+kubectl set image deployment/ghost ghost=ghost:09 --all
+kubectl rollout history deployment/ghost
+kubectl get pods
+```
+
+When getting the Pods, you should see the new `ghost` Pod is erroring, likely with a `ErrImagePull` or `ImagePullBackOff` status since the tag we specified on the image was bad.
+
+To fix this we can undo the change.
+
+```bash
+kubectl rollout undo deployment/ghost
+kubectl get pods
+```
+
+You should then see the `ghost` Pod working normally again.  You can also specify a specific revision to roll back to using the `--to-revision=` flag and specifying the revision number from the `rollout history` command.
+
+Deployments can be paused and resumes as well with
+
+```bash
+kubectl rollout pause deployment/ghost
+kubectl rollout resume deployment/ghost
+```
+
+ReplicationControllers can have rolling updates applied with `kubectl rolling-update` command, but as mentioned before, this is done on the client side. So if a connection is lost the update will stop.
+
+
+### Using DaemonSets
+
+A newer object is a `DaemonSet`, which ensures a single Pod is running on each cluster node.  Every Pod the DaemonSet manages uses the same image, and when new nodes are added, the controller will deploy a new, identical Pod on it. If the node is removed, the controller will also delete the Pod first.
+
+DaemonSets are useful in that it ensured a particular container is always running on every node, which in a large dynamic environment is helpful so an administrator does not always need to remember to deploy certain things, like for example a logging or metric generation application.
+
+There are ways to effect the kube-apiserver so that DaemonSets do not run on certain nodes.
+
+
+### Labels
+
+Labels are an important tool for cluster administration.  They can be used for selection using an arbitrary string regardless of the object type.  Labels are immutable as of `apps/v1`.
+
+Any resource can contain labels in its metadata. By default, when you use `kubectl create` to launch a Deployment, some labels are added.
+
+```yaml
+...
+  labels:
+    app: ghost
+    pod-template-hash: 5c7f765cdc
+...
+```
+
+Here are some examples of using and adding labels.
+
+For example, you could get Pod with the label `app` and a value of `ghost`.
+
+```bash
+kubectl get pods -l app=ghost
+```
+
+Or you could get all the Pods with the `app` label and list their values as another column like so.
+
+```bash
+kubectl get pods -L app
+```
+
+Labels are usually defined in Pod templates in Deployment spec but you can also add them on the fly.
+
+```bash
+kubectl label pods ghost-<uid> foo=bar
+```
+
+And you can show the labels on each pod with a `get`
+
+```bash
+kubectl get pods --show-labels
+```
+
+## Lab Exercises
+
+### Lab 7.1 - Working with ReplicaSets
+
