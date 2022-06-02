@@ -459,3 +459,156 @@ kubectl get pods --show-labels
 
 ### Lab 7.1 - Working with ReplicaSets
 
+This lab explored the objects that help to manage containers, a core task of Kubernetes. As Kubernetes has matured, the objects used to do this have changed. We will look at `ReplicaSets` which don't have more of the newer features Deployments have for management. We will also look at `Deployments` which manage ReplicaSets for us, as well as `DaemonSets` for when we want to ensure a container is run on every node of the cluster.
+
+The ReplicaSet was an evolution on Replica Controllers, which differ only on the selectors available for use. The only reason to use a ReplicaSet instead of a Deployment is if you will not need to update software or orchestrate updates.
+
+First, check to see that there are no resources currently on the cluster.
+
+```bash
+kubectl get rs
+```
+
+You should find that `No resources found in default namespace.`
+
+Next, create a YAML file to define a simple ReplicaSet.
+
+```bash
+vim rs.yaml
+```
+
+And in the YAML enter the following specification
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: rs-one
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      system: ReplicaOne
+  template:
+    metadata:
+      labels:
+        system: ReplicaOne
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.15.1
+        ports:
+        - containerPort: 80
+```
+
+And then create the ReplicaSet.
+
+```bash
+kubectl create -f rs.yaml
+```
+
+Then view the newly created ReplicaSet and the Pods it created. You should see two Pods running.
+
+```bash
+kubectl describe rs rs-one
+kubectl get pods
+```
+
+Now let's delete the ReplicaSet, but not the Pods it controls.
+
+```bash
+kubectl delete rs rs-one --cascade=orphan
+```
+
+Then, try to describe the ReplicaSet and view the Pods again.
+
+```bash
+kubectl describe rs rs-one
+kubectl get pods
+```
+
+When you `describe` the ReplicaSet you should see an error like `Error from server (NotFound): replicasets.apps "rs-one" not found` but when you list the Pods you should still see the two running that you had before.
+
+We can then recreate the ReplicaSet, and as long as the selector field is the same, it should take ownership of the running Pods. Pod software versions cannot be updated with this method.
+
+```bash
+kubectl create -f rs.yaml
+```
+
+Now view the `AGE` of both the ReplicaSet and the Pods it manages.
+
+```bash
+kubectl get rs
+kubectl get pods
+```
+
+You should see the ReplicaSet is newer than the Pods, as the Pods have been unchanged since they were created by the original ReplicaSet.
+
+Next we will isolate one of the Pods from the ReplicaSet, which we will do by editing the label of the Pod. We will update the `system` parameter to be `IsolatedPod`.
+
+```bash
+kubectl edit pod rs-one-<unique ID>
+```
+
+Now if you check the ReplicaSet, you should see two Pods are still running.
+
+```bash
+kubectl get rs
+```
+
+Now if you get the Pods as well, you should see there are now three running. And if you view them again using while showing the `system` label, you will see one has the `IsolatedPod` value we had set earlier. The ReplicaSet has done its job to make sure that the configured number of Pods are running under it'd defined criteria (in this case with the `system` label of `ReplicaOne`).
+
+```bash
+kubectl get pods
+kubectl get po -L system
+```
+
+Now if you delete the ReplicaSet and get the Pods and ReplicaSets
+
+```bash
+kubectl delete rs rs-one
+kubectl get pods,rs
+```
+
+you should only see the orphaned Pod with the changed `system` label.
+
+Finally, delete the orphaned Pod.
+
+```bash
+kubectl delete pod -l system=IsolatedPod
+```
+
+
+### Lab 7.2 - Working with DaemonSets
+
+`DaemonSets` are watch loops just like Deployments, but they serve the purpose to ensure that when nodes are added to the cluster a Pod is run on them. Deployments on the other hand only ensure that a certain number of Pods are created in general, not where they are allocated. DaemonSets are helpful since they ensure an application is on each node which can be helpful for things like logging and metrics, especially on large clusters where nodes are swapped often.  DaemonSets are also very helpful because they manage the garbage collection of Pods when nodes are terminated from the cluster.  Starting in `v1.12`, the scheduler handles the deployment of DaemonSets which allows for exclusion of certain nodes from the DaemonSet's scope.
+
+First, we will copy the YAML file we created for the ReplicaSet and use it as the base for the DaemonSet.
+
+```bash
+cp rs.yaml ds.yaml
+vim ds.yaml
+```
+
+In the `vim` editor window update the `kind` to `DaemonSet`, the `name` to `ds-one`, the `system` label to `DaemonSetOne`, and remove the `replicas` definition.
+
+Then, create and verify the new DaemonSet.
+
+```bash
+kubectl create -f ds.yaml
+kubectl get ds,pods
+```
+
+Then verify the image running inside each Pod.
+
+```bash
+kubectl describe pod ds-one-<unique ID> | grep Image:
+```
+
+You should see both are running an Nginx v1.15.1 container.
+
+
+### Lab 7.3 - Rolling Updates and Rollbacks
+
+Once advantage of micro-services is that an update can be applied to a container without disrupting the response to client requests.
+
