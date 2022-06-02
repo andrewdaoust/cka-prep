@@ -610,5 +610,79 @@ You should see both are running an Nginx v1.15.1 container.
 
 ### Lab 7.3 - Rolling Updates and Rollbacks
 
-Once advantage of micro-services is that an update can be applied to a container without disrupting the response to client requests.
+One advantage of micro-services is that an update can be applied to a container without disrupting the response to client requests.
 
+In this section we will use the `OnDelete` and `RollingUpdate` strategies to update our DaemonSet.  The `OnDelete` will upgrade a container once the one it is replacing is deleted. A `RollingUpdate` will bring up a new container immediately to replace the out-of-date Pod.
+
+First let's check the update strategy of the DaemonSet we specified in [lab 7.2](#lab-72---working-with-daemonsets).
+
+```bash
+kubectl get ds ds-one -o yaml | grep -A 4 Strategy
+```
+
+You should see that it is currently using a `RollingUpdate`. Let's edit the DaemonSet to use an `OnDelete` strategy by changing the `type` field in under the `updateStrategy`.
+
+```bash
+kubectl edit ds ds-one
+```
+
+Now let's update the Nginx image the Pods are using. And then we will verify that the image has not yet changed.
+
+```bash
+kubectl set image ds ds-one nginx=nginx:1.16.1-alpine
+kubectl describe po ds-one-<unique ID> | grep Image:
+```
+
+Now delete one of the Pods. Verify the new Pod is up an running and check the image again.
+
+```bash
+kubectl delete pod ds-one-<unique ID>
+kubectl get pod
+kubectl describe pod ds-one-<new unique ID> | grep Image:
+```
+
+Check the other Pod and you should see it is still running the `1.15.1` image.
+
+Now let's create a new DaemonSet using the original as a base, updating the name to `ds-two` and changing the strategy back to the default `RollingUpdate`.
+
+```bash
+kubectl get ds ds-one -o yaml > ds2.yaml
+vim ds2.yaml
+kubectl create -f ds2.yaml
+```
+
+Verify the image. It should be using the new `1.16.1-alpine` image that we updated to earlier.
+
+```bash
+kubectl get pods
+kubectl describe pod ds-two-<unique ID> | grep Image:
+```
+
+Now let's change the image back to `1.15.1` with the `edit` command and then check the DaemonSet and Pods.
+
+```bash
+kubectl edit ds ds-two
+kubectl get ds ds-two
+kubectl get pods
+kubectl describe pod ds-two-<unique ID> | grep Image:
+```
+
+Notice the Pods for `ds-two` are much newer than the DaemonSet itself and that the Nginx image is `1.15.1`. This is because the edit took effect right away because we changed the strategy to `RollingUpdate`.
+
+Then view the rollout status and history and then clean up the resources.
+
+```bash
+kubectl rollout status ds ds-two
+kubectl rollout history ds ds-two
+kubectl rollout history ds ds-two --revision=2
+kubectl delete ds ds-one ds-two
+```
+
+
+## Knowledge check
+
+- The __`replicas`__ field determines the number of duplicate Pods deployed by a Deployment
+- The __`strategy`__ field is a header that has to do with updating Pods.
+- __Labels__ are metadata used to select an object with `kubectl`, based on an arbitrary string, regardless of the object type
+- The __`history`__ argument is passed to `kubectl rollout` to see the revision history of an object
+- The __`undo`__ argument is passed to `kubectl rollout` to return to a previous object version
