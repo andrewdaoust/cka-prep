@@ -516,8 +516,6 @@ openssl x509 -pubkey \
     -sha256 -hex | sed's/ˆ.* //'
 ```
 
-openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/ˆ.* //'
-
 5. On the __worker__ node add a hostname alias for the __cp__ name like we did originally on the cp node in the previous lab, with the alias `k8scp`.
 
 ```bash
