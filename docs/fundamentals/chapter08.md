@@ -149,7 +149,7 @@ kubectl get pvc
 ```
 
 
-### Persistent volume
+### Persistent Volume
 
 Here is a basic example of a PV declaration that uses a `hostPath` as the storage type.
 
@@ -171,4 +171,63 @@ spec:
 
 Each storage type has its own configuration settings.  An example would be a Ceph or GE Persistent Disk that already exists, so it would not need to be configured and would just need to be claimed from the provider.
 
-PVs are not namespaced objects, but PVCs are.
+PVs are not namespaced objects, but PVCs are. Stable as of v1.18, Raw Block Volumes are allowed to be statically provisioned, supporting a handful of different volume plugins, which you can find [an up-to-date list of here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#raw-block-volume-support).
+
+Locally attached storage is also a stable feature, often used as a part of distributed file systems or for databases.
+
+
+### Persistent Volume Claim
+
+Once a PV has been created in the cluster, a manifest for a claim can be written and the claim used by a Pod definition.  In the Pod, the volume is a `persistentVolumeClaim`.
+
+```yaml title={Persistent Volume Claim manifest}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: myclaim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8GI
+```
+
+```yaml title={Pod manifest using PVC}
+...
+  spec:
+    containers:
+    ...
+    volumes:
+    - name: test-volume
+      persistentVolumeClaim:
+        claimName: myclaim
+```
+
+That example is rather simple. A more complex configuration might look like
+
+```yaml title={Complex PVC usage}
+...
+  volumeMounts:
+  - name: Cephpd
+    mountPath: /data/rbd
+  volumes:
+  - name: rbdpd
+    rbd:
+      monitors:
+      - '10.19.14.22:6789'
+      - '10.19.14.23:6789'
+      - '10.19.14.24:6789'
+      pool: k8s
+      image: client
+      fsType: ext4
+      readOnly: true
+      user: admin
+      keyring: /etc/ceph/keyring
+      imageformat: "2"
+      imagefeatures: "layering"
+```
+
+
+### Dynamic provisioning
+
