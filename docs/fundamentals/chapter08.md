@@ -90,3 +90,85 @@ The CSI allows for more flexibility and decoupling plugins from the Kubernetes s
 
 ### Shared volume example
 
+```yaml
+...
+  containers:
+  - name: alphacont
+    image: busybox
+    volumeMounts:
+    - mountPath: /alphadir
+      name: sharevol
+  - name: betacont
+    image: busybox
+    volumeMounts:
+    - mountPath: /betadir
+      name: sharevol
+  volumes:
+  - name: sharevol
+    emptyDir: {} 
+```
+
+The snipping from the YAML above would produce a Pod named `exampleA` that has two containers both with access to a volume, `sharevol`. An `emptyDir` or `hostPath` could both easily be used here since both require no additional setup.
+
+If the Pod was created and then the following commands are run
+
+```bash
+kubectl exec -it exampleA -c betacont -- touch /betadir/foobar
+kubectl exec -it exampleA -c alphacont -- ls -l /alphadir
+```
+
+you should see a `foobar` file in the `alphadir` even though the other container wrote the data.  The containers have immediate access to any data the either of them write to the shared volume, and there is nothing stopping them from overwriting each others data. Locking or versioning of the data written by the containers must be considered and implemented into the containerized application to avoid issues with corrupted data.
+
+
+### Persistent volumes and claims
+
+A persistent volume (pv) is another storage abstraction used to give data a lifetime that exceeds that of a Pod. Pods define a volume that used the type `persistentVolumeClaim` (`pvc`). The pvc has various parameters to define the size and the type of backend storage, known as the `StorageClass`.  The cluster then attached the `persistentVolume`.  The cluster will dynamically use volumes that are available, irrespective of the storage type, allowing the claims to use ay backend storage.
+
+#### Phases of persistent storage
+
+__Provisioning__ of the persistent volumes can take a few forms. For example, they could be defined ahead of time by the administrator of the cluster, or they might dynamically be created, say by a request from a cloud provider.
+
+A __binding__ operation occurs when a watch loop see a new PVC, which contains the storage size, access request, and optionally, a `StorageClass`.  The controller locates a PV that matches this request, or it may have to wait for the `StorageClass` provisioner to create a new one.  The PV must meet the requested storage size, but it could contain more if only larger PV are available.
+
+__Use__ of the PV begins when the volume is mounted to a Pod and continues through the lifetime of that Pod.
+
+When the Pod is done with the volume and an API request is sent, the PVC is deleted and the volume is said to be __released__.  The volume remains in the same state from when the claim was deleted until it available to a new claim.  The data on the volume is retained depending on the defined `persistentVolumeReclaimPolicy`.
+
+Volumes are __reclaimed__ when one of three options happen:
+
+- A __retain__, which keeps the data and allows the admin to handle the storage and data.
+- A __delete__, removing the API object and the associated storage.
+- A __recycle__, which runs a `rm -rf /mountpoint` and then makes the volume available to a new claim.  With dynamic provisioning reaching good stability, this is intended to be depreciated.
+
+
+Like with other API object, PVs and PVCs can be viewed and described with `kubectl`.
+
+```bash
+kubectl get pv
+kubectl get pvc
+```
+
+
+### Persistent volume
+
+Here is a basic example of a PV declaration that uses a `hostPath` as the storage type.
+
+```yaml
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: 10Gpv01
+  labels: 
+    type: local 
+spec:
+  capacity: 
+    storage: 10Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/somepath/data01"
+```
+
+Each storage type has its own configuration settings.  An example would be a Ceph or GE Persistent Disk that already exists, so it would not need to be configured and would just need to be claimed from the provider.
+
+PVs are not namespaced objects, but PVCs are.
