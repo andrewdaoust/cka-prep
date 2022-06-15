@@ -260,4 +260,93 @@ You can learn more about the project [here](https://rook.io/).
 
 ### Secrets
 
+For data you don't want readable to the naked eye, like a password, you can use secrets. Secret API resources can take this data and encode or encrypt it so it is not easily readable.
+
+You can create, get, and delete secrets like so:
+
+```bash
+kubectl create secret generic --help
+kubectl create secret generic mysql --from-literal=password=root
+kubectl get secrets
+kubectl delete secret mysql
+```
+
+Secrets are not encrypted by default, but instead are base64 encoded. To encrypt secrets you must create an `EncryptionConfiguration` with a key and proper identity.  Then the kube-apiserver needs to have the `--encryption-provider-flag` enabled to a previously configured provider (e.g. `aescbc` or `ksm`). Once enabled, every secret must be recreated since the encryption happens on the write.
+
+You can have multiple keys, each is tried during decryption.  The first key of the first provider is used to encrypt secrets. To rotate them, create a new key, restart all kube-apiserver processes, and then recreate all secrets.
+
+The encoded string in the secret can be viewed with `kubectl`.  The secret is decoded and saved as a string to file, which can be used as an environment variable or in a new directory, similar to how a volume is mounted.
+
+Secrets can be made manually with a manifest as well by pasting the encoded string into the manifest.  Here is an example:
+
+```bash
+echo LFTr@1n | base64
+vim secret.yaml
+```
+
+```yaml title={secret.yaml}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lf-secret
+data:
+  password: TEZUckAxbgo=
+```
+
+where the output of the `echo` command is entered as the `password` value.
+
+
+### Using secrets via environment variables
+
+You can configure a secret as an environment variable for a Pod in a manifest like so:
+
+```yaml
+...
+  spec:
+    containers:
+    - image: mysql:5.5
+      name: dbpod
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: mysql
+            key: password
+```
+
+There is not a limit to the number of secrets used, but a secret can only be up to 1 MB in size.  Secrets, just like any other API object, takes up memory, so with large numbers you can deplete memory on a node.
+
+Secrets are stored in `tmpfs` storage on the host node, and only get sent to the host Pod.  All volumes that a Pod request must exist before containers are started, secrets are no different.
+
+
+### Mounting secrets as volumes
+
+Secrets can also be mounted as files using volume definitions.  The mount path contains a file with the name of the secret.
+
+```yaml
+...
+  spec:
+    containers:
+    - image: busybox
+      command:
+        - sleep
+        - "3600"
+      volumeMounts:
+      - mountPath: /mysqlpassword
+        name: mysql
+      name: busy
+    volumes:
+    - name: mysql
+        secret:
+          secretName: mysql
+```
+
+Once the Pod is up and running, you can verify a secret is accessible with
+
+```bash
+kubectl exec -it busybox -- cat /mysqlpassword/password
+```
+
+
+### Portable data with ConfigMaps
 
