@@ -231,3 +231,33 @@ That example is rather simple. A more complex configuration might look like
 
 ### Dynamic provisioning
 
+Using persistent volumes and abstracting that storage with a claim were very powerful, but it originally required an administrator to create them.  Starting in Kubernetes v1.4, dynamic provisioning was added so that a cluster could request storage from an external, pre-configured source.  
+
+The `StorageClass` API resources lets admins define a persistent volume provisioner. This is of a certain type with storage specific configuration.  Once created, users can request a claim from the `StorageClass`, and the API fills this via auto-provisioning. The resource will be reclaimed as configured by the provider.  Common choices from dynamic storage are AWS and GCE, and there are other options like a Ceph cluster or iSCSI.
+
+This is an example of an AWS `StorageClass` using gp2 storage:
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: gp2
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+```
+
+
+### Using Rook for storage orchestration
+
+Rook is a project that allows for orchestration of storage by multiple providers. As with other agents within Kubernetes, Rook uses custom resource definitions (CRD) and a custom operator to handle the provisioning of storage according to backend storage type.  Currently several storage providers are supported, such as Ceph, Cassandra, and Network File System (NFS).
+
+You can learn more about the project [here](https://rook.io/).
+
+
+### Secrets
+
+
