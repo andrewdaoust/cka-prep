@@ -350,3 +350,71 @@ kubectl exec -it busybox -- cat /mysqlpassword/password
 
 ### Portable data with ConfigMaps
 
+ConfigMaps are similar to secrets, but the data they contain is not encoded.  ConfigMaps decouple a container image from their configuration artifacts (and this fits well with Kubernetes model of decoupling). Data is stored as key-value pairs or plain configuration files of any format, and it can come from a collection of files or all files in a directory. ConfigMaps can also be populated from a literal value.
+
+Here's an example of how you might use a ConfigMap.  Assume you have a YAML (or any other file type) configuration file on your local machine. You can create a `configmap` object that contains this data. The `data` section of the ConfigMap will contain the configuration when you view the object.
+
+```bash
+kubectl get configmap envyaml -o yaml
+```
+
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: envyaml
+data:
+  env.yaml: |
+    ...
+```
+
+ConfigMaps are consumed in multiple ways:
+
+- Pod environment variables from one or many ConfigMaps
+- For Pod commands
+- Populate a volume, or add ConfigMap data to specific path within a volume
+- Set file names and access modes in a volume
+- Use by system components or controllers
+
+
+### Using ConfigMaps
+
+Like secrets, Configmaps must exist prior to use (unless they are marked as optional) and are namespace dependent.
+
+Let's first look at the use case of setting an environment variable. The manifest defining the Pods will use a `valueFrom` key and a `configMapKeyRef` value to get the data from the ConfigMap.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: envar-demo
+spec:
+  containers:
+  - name: envar-demo-container
+    env:
+    - name: ENVIRON_VAR_VALUE
+      valueFrom:
+        configMapKeyRef:
+          name: some-config
+          value: someconfig.how
+```
+
+Now let's look at creating a volume with a ConfigMap.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-volunes
+spec:
+  volumes:
+  - name: config-volume
+    configMap:
+      name: some-config
+```
+
+
+## Lab Exercises
+
+### Lab 8.1 - Create a ConfigMap
+
