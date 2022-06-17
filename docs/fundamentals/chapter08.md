@@ -418,3 +418,155 @@ spec:
 
 ### Lab 8.1 - Create a ConfigMap
 
+ConfigMaps can ingest data in 3 ways, from a literal value, from files, or from directories.  Let's start by creating some data to ingest into a ConfigMap via file and directory.
+
+```bash
+mkdir primary
+echo c > primary/cyan
+echo m > primary/magenta
+echo y > primary/yellow
+echo k > primary/black
+echo "known as key" >> primary/black
+echo blue > favorite
+```
+
+And now let's create a ConfigMap with this data using all three types of data ingestion.
+
+```bash
+kubectl create configmap colors \
+    --from-literal=text=black \  # Using a literal value
+    --from-file=./favorite \     # Using a file
+    --from-file=./primary/       # Using a directory
+```
+
+Now let's view the ConfigMap in the cluster.
+
+```bash
+kubectl get configmap colors
+kubectl get configmap color -o yaml
+```
+
+With a ConfigMap successfully created, we can now use it in a Pod.
+
+```bash
+vim simpleshell.yaml
+```
+
+```yaml title={simpleshell.yaml}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell-demo
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    env:
+    - name: ilike
+      valueFrom:
+        configMapKeyRef:
+          name: colors
+          key: favorite
+```
+
+In this case we are using the ConfigMap to define an environment variable, `ilike`.  Now let's create the Pod and check the variable's value, the we can delete it.
+
+```bash
+kubectl create -f simpleshell.yaml
+kubectl exec shell-demo -- /bin/bash -c 'echo $ilike'
+kubectl delete pod shell-demo
+```
+
+All variables in a ConfigMap can be included as environment variables.  We cna replace the `env` section in our YAML manifest with an `envFrom`. Open the `simpleshell.yaml` in vim and change it to this:
+
+```yaml title={simpleshell.yaml}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell-demo
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  #  env:
+  #  - name: ilike
+  #    valueFrom:
+  #      configMapKeyRef:
+  #        name: colors
+  #        key: favorite
+    envFrom:
+    - configMapRef:
+        name: colors
+```
+
+Then create the Pod and check the environment variables. You should see `black`, `cyan`, `yellow`, `text`, `favorite`, and `magenta` environment variables. Then you can delete the Pod again.
+
+```bash
+kubectl create -f simpleshell.yaml
+kubectl exec shell-demo -- /bin/bash -c 'env'
+kubectl delete pod shell-demo
+```
+
+ConfigMaps can also be defined in YAML. Let's create a new one using that method.
+
+```bash
+vim car-map.yaml
+```
+
+```yaml title={car-map.yaml}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fast-car
+  namespace: default
+data:
+  car.make: Ford
+  car.model: Mustang
+  car.trim: Shelby
+```
+
+Then we can create the ConfigMap and view it.
+
+```bash
+kubectl create -f car-map.yaml
+kubectl get configmap fast-car -o yaml
+```
+
+We'll use this ConfigMap to mount it as as volume to a Pod.  We'll reuse out `simpleshell.yaml`, open it and `vim` and edit it to match the new spec by removing the `env` and `envFrom` fields and adding in new `volumeMounts` and `volumes` configuration.
+
+```yaml title={simpleshell.yaml}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell-demo
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - name: car-vol
+      mountPath: /etc/cars
+  volumes:
+  - name: car-vol
+    configMap:
+      name: fast-car
+```
+
+Now let's create the Pod again and then inspect the mounted volume.
+
+```bash
+kubectl create -f simpleshell.yaml
+kubectl exec shell-demo -- /bin/bash -c 'df -ha |grep car'
+kubectl exec shell-demo -- /bin/bash -c 'cat etc/cars/car.trim'
+```
+
+We can then delete the Pod and the ConfigMaps.
+
+```bash
+kubectl delete pod shell-demo
+kubectl delete configmap fast-car colors
+```
+
+
+### Lab 8.2 - Create a persistent NFS volume (PV)
+
