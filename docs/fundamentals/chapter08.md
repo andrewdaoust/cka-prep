@@ -570,3 +570,183 @@ kubectl delete configmap fast-car colors
 
 ### Lab 8.2 - Create a persistent NFS volume (PV)
 
+To set up an NFS PV we first need an NFS server.
+
+```bash
+sudo apt-get update && sudo apt-get install -y nfs-kernel-server
+```
+
+Then we will make and populate a directory to be shared.
+
+```bash
+sudo mkdir /opt/sfw
+sudo chmod 1777 /opt/sfw
+sudo bash -c 'echo software > /opt/sfw/hello.txt'
+```
+
+Now we will edit the NFS file server to share the new directory we created.  We will begin by sharing the directory to all but we can adjust this later if needed by using `snoop` to see the inbound request and then update to a more narrow scope.
+
+```bash
+sudo vim /etc/exports
+```
+
+When `vim` opens, add the following line:
+
+```
+/opt/sfw/ *(rw,sync,no_root_squash,subtree_check)
+```
+
+And then force the file to be re-read.
+
+```bash
+sudo exportfs -ra
+```
+
+:::important Worker Node
+Now let's switch to the worker node and test the NFS by mounting and inspecting it.
+
+```bash
+sudo apt-get -y install nfs-common
+showmount -e k8scp
+sudo mount k8scp:/opt/sfw /mnt
+ls -l /mnt
+```
+
+You should see the `hello.txt` file we created on the cp node.
+:::
+
+Now back on the cp node, let's create a YAML file to define the persistent volume. When defining a persistent volume in YAML, only syntax is checked, so any misspelling in a directory name will not cause an error, but the Pod will not start.  Note `accessModes` do not affect actual access and are usually used as labels.
+
+```bash
+vim PVol.yaml
+```
+
+```yaml title={PVol.yaml}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvvol-1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /opt/sfw
+    server: k8scp
+    readOnly: false
+```
+
+Then we can create the PV and check it was created.
+
+```bash
+kubectl create -f PVol.yaml
+kubectl get pv
+```
+
+
+### Lab 8.3 - Creating a persistent volume claim (PVC)
+
+First check to see if any PVCs exist.
+
+```bash
+kubectl get pvc
+```
+
+Now define and then create a new PVC.
+
+```bash
+vim pvc.yaml
+```
+
+```yaml title={pvc.yaml}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-one
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Mi
+```
+
+```bash
+kubectl create -f pvc.yaml
+kubectl get pvc,pv
+```
+
+Notice when you got the PVC, it was 1Gi even though the request was for 200Mi. When you check the PV, you should now see the status as `BOUND`.
+
+Now create a new Deployment that will use the PVC.  We can reuse one of our old deployments. We'll update the name and add a `volumeMounts` and `volumes` section.  The `claimName` in the configuration must match an exist PVC.
+
+```bash
+cp first.yaml nfs-pod.yaml
+vim nfs-pod.yaml
+```
+
+```yaml title={nfs-pod.yaml}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  generation: 1
+  labels:
+    app: nginx
+  name: nginx-nfs
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: nginx
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+        volumeMounts:
+        - name: nfs-vol
+          mountPath: /opt
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: pvc-one
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+```
+
+Then, create the Pod and check its details. Also check the PVC, you should see it is `BOUND`.
+
+```bash
+kubectl create -f nfs-pod.yaml
+kubectl get pods
+kubectl describe pod nginx-nfs-<unique ID>
+kubectl get pvc
+```
+
+
+### Lab 8.4 - Use a ResourceQuota to limit PVC count and usage
+
