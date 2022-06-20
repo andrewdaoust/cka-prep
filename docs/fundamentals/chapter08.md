@@ -750,3 +750,64 @@ kubectl get pvc
 
 ### Lab 8.4 - Use a ResourceQuota to limit PVC count and usage
 
+Cloud storage often required limiting consumption by certain users because it is so flexible.  For this we will use a `ResourceQuota` to limit the total consumption and the number of PVCs.
+
+First let's delete the PV and PVC we created.
+
+```bash
+kubectl get pv,pvc
+kubectl delete deploy nginx-nfs
+kubectl delete pvc pvc-one
+kubectl delete pv pvvol-1
+```
+
+And then we will create a `ResourceQuota`.
+
+```bash
+vim storage-quota.yaml
+```
+
+```yaml title={storage-quota.yaml}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: storagequota
+spec:
+  hard:
+    persistentvolumeclaims: "10"
+    requests.storage: "500Mi"
+```
+
+Then we will create a new namespace, `small`, and describe it.
+
+```bash
+kubectl create ns small
+kubectl describe ns small
+```
+
+You'll see it currently has no resource quota or limits. Then recreate the PV and PVC in the new namespace and then apply the new ResourceQuota and describe the namespace again.
+
+```bash
+kubectl -n small create -f PVol.yaml
+kubectl -n small create -f pvc.yaml
+kubectl -n small create -f storage-quota.yaml
+kubectl describe ns small
+```
+
+You should see it now has a ResourceQuota applied on the namespace. Now let's edit the `nfs-pod.yaml` file from earlier and remove the `namespace` line from the metadata, and then recreate it in the new `small` namespace and verify it's running.
+
+```bash
+vim nfs-pod.yaml
+kubectl -n small create -f nfs-pod.yaml
+kubectl -n small get deploy
+kubectl -n small describe deploy nginx-nfs
+```
+
+Then, get the Pods and describe the new Pod to make sure the NFS mounted volume is being used.
+
+```bash
+kubectl -n small get pod
+kubectl -n small describe pod nginx-nfs-<unique ID>
+```
+
+TODO: Continue at step 11
