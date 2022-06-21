@@ -803,11 +803,88 @@ kubectl -n small get deploy
 kubectl -n small describe deploy nginx-nfs
 ```
 
-Then, get the Pods and describe the new Pod to make sure the NFS mounted volume is being used.
+Then, get the Pods and describe the new Pod to make sure the NFS mounted volume is being used, and then check the quota on the namespace.
 
 ```bash
 kubectl -n small get pod
 kubectl -n small describe pod nginx-nfs-<unique ID>
+kubectl describe ns small
 ```
 
-TODO: Continue at step 11
+Now let's create a 300M file in the /opt/sfw directory and then check the quota on the namespace again.
+
+```bash
+sudo dd if=/dev/zero of=/opt/sfw/bigfile bs=1M count=300
+kubectl describe ns small
+du -h /opt/
+```
+
+You should see the quota is unchanged. With the NFS, the size of the shared file does not count against the deployment. Now let's demonstrate what happens when deployments request more than the quota.  First we will delete the deployment, and then the PVC. Then view the PVC.
+
+```bash
+kubectl -n small get deploy
+kubectl -n small delete deploy nginx-nfs
+kubectl describe ns small
+kubectl -n small get pvc
+kubectl -n small delete pvc pvc-one
+kubectl describe ns small
+kubectl -n small get pv
+kubectl -n small get pv/pvvol-1 -o yaml
+```
+
+Notice that the quota didn't change until the PVC was deleted.  Also take note of the `persistentVolumeReclaimPolicy` of the StorageClass.  This value could be `Delete`, `Retain`, or `Recycle`, but manually created PVs default to `Retain` unless set otherwise when creating.  This is the default because it allows for recovery of any data since the storage is kept.  Let's change this from the default.
+
+Currently we need to delete the PV and then recreate it, but future development plans on having a deleter plugin. We will then recreate the PV and then use `kubectl patch` command to update the policy to `Delete`.
+
+```bash
+kubectl delete pv/pvvol-1
+grep Retain PVol.yaml
+kubectl create -f PVol.yaml
+kubectl patch pv pvvol-1 -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
+kubectl get pv/pvvol-1
+```
+
+Now check the quota on the namespace and then recreate the PVC and check again. You should see the usage go up, even without Pods deployed.
+
+```bash
+kubectl describe ns small
+kubectl create -n small -f pvc.yaml
+kubectl describe ns small
+```
+
+Now we will delete the quota and reduce the capacity to 100Mi.
+
+```bash
+kubectl -n small get resourcequota
+kubectl -n small delete resourcequota storagequota
+vim storage-quota.yaml
+kubectl -n small create -f storage-quota.yaml
+kubectl describe ns small
+```
+
+Note when we describe the namespace to view the limits that the hard limit has already been exceeded. Now we will recreate the Deployment and check the Pods are running. Note that no errors will show.
+
+```bash
+kubectl -n small create -f nfs-pod.yaml
+kubectl -n small describe deploy/nginx-nfs
+kubectl -n small get po
+```
+
+Since we are able to deploy Pods with no error even with the quota exceeded, we will delete the deployment and PVC to see if the Reclaim event takes place.
+
+```bash
+kubectl -n small delete deploy nginx-nfs
+kubectl -n small delete pvc/pvc-one
+kubectl -n small get pv
+```
+
+Notice the `STATUS` is `Failed`.  This has to do with the lack of a deleter volume plugin for NFS. Other storage protocols have a plugin for this.
+
+Go ahead and delete the PV and then edit the PV manifest and change the `persistentVolumeReclaimPolicy` to `Recycle`.
+
+```bash
+kubectl delete pv/pvvol-1
+vim PVol.yaml
+```
+
+Continue at #31
