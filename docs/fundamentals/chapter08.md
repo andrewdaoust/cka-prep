@@ -887,4 +887,57 @@ kubectl delete pv/pvvol-1
 vim PVol.yaml
 ```
 
-Continue at #31
+Now we'll add a LimitRange to the new namespace and try to create the PV and PVC again. We can reuse the LimitRange from a previous lab.
+
+```bash
+kubectl -n small create -f low-resource-range.yaml
+kubectl describe ns small
+```
+
+You should see both quota and resource limits applied to the namespace. Now recreate the PV and PVC. Note the PV has a `Recycle` reclaim policy.
+
+```bash
+kubectl -n small create -f PVol.yaml
+kubectl get pv
+kubectl -n small create -f pvc.yaml
+```
+
+You should get an error when creating the PVC.  The quota only takes effect when there is a resource limit in effect.
+
+Change the `resourcequota` to increase requested storage to 500Mi under `spec.hard.requests.storage` and then recreate the PVC and Deployment.
+
+```bash
+kubectl -n small edit resourcequota
+kubectl -n small create -f pvc.yaml
+kubectl -n small create -f nfs-pod.yaml
+kubectl describe ns small
+```
+
+Delete the deployment and then view the PV and PVC.
+
+```bash
+kubectl -n small delete deployment nginx-nfs
+kubectl -n small get pvc,pv
+```
+
+Then delete the PVC and view the PV. You should see it is `Available`.
+
+```bash
+kubectl -n small delete pvc pvc-one
+kubectl -n small get pv
+```
+
+Then finally you can delete the PV.
+
+```bash
+kubectl delete pv pvvol-1
+```
+
+
+## Knowledge check
+
+- Applications are __not__ required to use persistent storage.
+- A Deployment uses a __PersistentVolumeClaim__.
+- The `persistentVolumeReclaimPolicy` determines what happens to the persistent storage upon release.
+- Secrets does __not__ contain encrypted data.
+- ConfigMaps can be created from __literal values__, __individual files__, or __many files in a directory__.
