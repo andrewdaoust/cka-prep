@@ -87,3 +87,42 @@ Ingress controllers are not services but instead a microservice running within a
 
 
 ### Services diagram
+
+Controllers for services and endpoints run in the kube-controller-manager, and send API calls through the kube-apiserver. The kube-apiserver then talks to the network plugin to direct the agents on each node what to do. Each kube-proxy is also sent an API call to manage the firewall locally, which is typically iptables or ipvs. The kube-proxy mode is configured via a flag, `mode`, set on initialization. The mode can be `iptables`, `IPVS`, or `userspace`.
+
+In `iptables` mode, the API continually sends updates to the kube-proxy about changes to Services and Endpoints so rules can be updated as the objects are created, modified, and deleted.
+
+
+### Overall network view
+
+![overall network view](./img/ch09-overall-network-view.png)
+
+
+### Local proxy for development
+
+When doing local development for an application, a quick way to check the service is to run a local proxy with `kubectl`. It captures the shell (unless places in the background). When running, calls can be made to the API via `localhost` and you can also reach the ClusterIP services via the API URLs.  The IP and port to listen on is configurable via command arguments.  To run a proxy:
+
+```bash
+kubectl proxy
+```
+
+This starts a proxy on `localhost` and uses port `8001` by default.  Then to access a service, name `example`, we can use the URL `http://localhost8001/api/v1/namespaces/default/services/example`. If the service port has a name, you'd append `:<port name>` to the end of the URL.
+
+
+### DNS
+
+Since v1.13, CoreDNS has been the default DNS provided. CoreDNS allows for a large amount of flexibility. When a container starts, it runs a server for the zones it is configured to serve, then each server loads one or many plugin chains to provide additional functionality. Like other microservices, clients access it using a service, kube-dns.
+
+The in=tree plugins provide most additional common functionality. It is a fairly easy process to write and enable other plugins for extended functionality.
+
+Common plugins are used to provide metrics to Prometheus, for error logging, health checking of the application, among other things.
+
+
+### Verifying DNS registration
+
+To verify DNS setup and check services are being registered, the easiest way is to run a pod with a shell and networking tools, create a service, and then exec in to do DNS lookups.
+
+Troubleshooting DNS in the cluster uses typical tools like nslookup, dig, nc, wireshark, etc.  The difference though is we are leveraging a service to access the DNS server, so we need to check labels and selectors in addition to standard network debugging.
+
+Other steps, like checking the Network Policies and firewalls can also be done. These will be covered more in a later chapter.
+
