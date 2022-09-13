@@ -136,3 +136,126 @@ Services are Kubernetes objects which define policies to access logical sets of 
 Native applications can use the `Endpoint` API for access but non-native apps can use a virtual IP-based bridge to access the Pods. These use a ServiceType which could be one of the following:
 - ClusterIP - default and only exposes a cluster internal IP, so external access is prevented.
 - NodePort - exposes a node IP on a static port. A ClusterIP is created in the background.
+- LoadBalancer - exposes the service externally on the cloud provider's load balancer. A `NodePort` and `ClusterIP` are automatically created.
+- ExternalName - uses a CNAME record to map the service to the contents of `externalRecord`
+
+Services are used to decouple the objects from the traffic so that they can be replaced without any interruption of the client to the backend microservice.
+
+To begin this lab we will first create a YAML manifest for a `nginx` deployment with 2 replicas.
+
+
+```bash
+vim nginx-one.yaml
+```
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-one
+  labels:
+    system: secondary
+  namespace: accounting
+spec:
+  selector:
+    matchLabels:
+      system: secondary
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        system: secondary
+    spec:
+      containers:
+      - image: nginx:1.20.1
+        imagePullPolicy: Always
+        name: nginx
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+      nodeSelector:
+        system: secondOne
+```
+
+Before we create anything, first let's look at the nodes and their labels.
+
+```bash
+kubectl get nodes --show-labels
+```
+
+Now let's get creating our deployment.  Notice we want to create the Deployment in the `accounting` namespace.  First we must create it, otherwise we will get an error. Then we can create the deployment.
+
+```bash
+kubectl create ns accounting
+kubectl create -f nginx-one.yaml\
+kubectl -n accounting get pods
+```
+
+Now that the deployment is created, when you view the pods you should see that the `STATUS` is `Pending`. Now looks the the events when you `describe` one of the pods.
+
+```bash
+kubectl -n accounting describe pod nginx-one-<unique ID>
+```
+
+You should see a `FailedScheduling` warning due to no node matching the node selector we specified in the manifest.
+
+To fix this, let's add the label onto one of the nodes, and then view the labels again.
+
+```bash
+kubectl label node <worker node name> system=secondOne
+kubectl get nodes --show-labels
+```
+
+You should now see a new label, `system`, on the worker node with a value of `secondOne`. Now if you check the Pods again, they should have been scheduled and be `Running`.
+
+```bash
+kubectl -n accounting get pods
+kubectl get pods -l system=secondary --all-namespaces
+```
+
+Now that the Pods are up and running, let's expose the the deployment.
+
+```bash
+kubectl -n accounting expose deployment nginx-one
+kubectl -n accounting get ep nginx-one
+```
+
+You should see some endpoints have been created for the deployment, ending in the port `8080` we specified in the manifest. Try to `curl` one of the endpoints. And then try to curl the endpoint, but instead using port `80`.
+
+```bash
+curl <endpoint>
+curl <IP>:80
+```
+
+The first command should fail with a connection refusal, while the second `curl` succeeds.  This is because `nginx` listens on port 80 by default. Let's delete the Deployment, change the exposed port to 80, and redeploy.
+
+```bash
+kubectl -n accounting delete deployment nginx-one
+vim nginx-one.yaml
+kubectl create -f nginx-one.yaml
+```
+
+
+### Lab 9.2 - Configure a NodePort
+
+Previously we deployed a LoadBalancer. This time we will deploy a NodePort instead using the `expose` command.  NodePorts NAT traffic from outside the cluster. One reason to use a NodePort is to avoid having to use a cloud providers load balancer when deploying one in Kubernetes.
+
+Deploy the NodePort and then describe the services.
+
+```bash
+kubectl -n accounting expose deployment nginx-one --type=NodePort --name=service-lab
+kubectl -n accounting describe services
+```
+
+Find the port number that the NodePort exposed with the `service-lab` service thst was printed out in the `describe`. Then find the cluster hostname or IP address. It should be the first line of this command.
+
+```bash
+kubectl cluster-info
+```
+
+Then you should be able to `curl` the endpoint made up of the hostname/IP and the NodePort port number. Also try in your browser to reach the NodePort by using the public IP of the node you SSH into and the port number.
+
+
+### Lab 9.3 - Working with CoreDNS
+
+

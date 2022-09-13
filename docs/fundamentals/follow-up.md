@@ -71,6 +71,9 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 - [SELinux](./chapter07.md#securitycontext)
 - [AppArmor](./chapter07.md#securitycontext)
 
+## Chapter 9
+
+- [NAT](./chapter09.md#lab-9-2---configure-a-nodeport)
 
 ## Additional
 
