@@ -126,3 +126,13 @@ Troubleshooting DNS in the cluster uses typical tools like nslookup, dig, nc, wi
 
 Other steps, like checking the Network Policies and firewalls can also be done. These will be covered more in a later chapter.
 
+
+## Lab Exercises
+
+### Lab 9.1 - Deploy a new Service
+
+Services are Kubernetes objects which define policies to access logical sets of Pods. They are typically assigned `labels` so that there is persistent access, even when front or back end containers are terminated and replaced.
+
+Native applications can use the `Endpoint` API for access but non-native apps can use a virtual IP-based bridge to access the Pods. These use a ServiceType which could be one of the following:
+- ClusterIP - default and only exposes a cluster internal IP, so external access is prevented.
+- NodePort - exposes a node IP on a static port. A ClusterIP is created in the background.
