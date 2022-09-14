@@ -258,4 +258,92 @@ Then you should be able to `curl` the endpoint made up of the hostname/IP and th
 
 ### Lab 9.3 - Working with CoreDNS
 
+Instead of using IP addresses, we can leverage CoreDNS for predictable hostnames instead. First we will create a Pod for testing using Ubuntu.
 
+```bash
+vim nettool.yaml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu
+spec: 
+  containers:
+  - name: ubuntu
+    image: ubuntu:latest
+    command: ["sleep"]
+    args: ["infinity"]
+```
+
+```bash
+kubectl create -f nettool.yaml
+```
+
+Once created, log onto the Pod.
+
+```bash
+kubectl exec -it ubuntu -- /bin/bash
+```
+
+:::important
+The following commands should all be run on the `ubuntu` Pod's container. First we will install some tools for investigating the DNS and network.
+
+```bash
+apt-get update
+apt-get install curl dnsutils -y
+```
+
+Then run the `dig` command. You will see information about root name servers and info about the DNS server responding.
+
+Now take a looks the `etc/resolv.conf` file. This will show us nameservers and the default domain to search if no Fully Qualified Distinguished Name (FQDN) is used. You'll see the first result is `default.svc.cluster.local`. Then use the `dig` command again, this time using the nameserver IP.
+
+```bash
+cat /etc/resolv.conf
+dig @10.96.0.10 -x 10.96.0.10
+```
+
+Notice the domain name, `kube-dns.kube-system.svc.cluster.local.` and how it uses `kube-system.svc.cluster.local.` instead of `default.svc.cluster.local.` from what we saw in `/etc/resolv.conf`, so that it matches the namespace of the service, `kube-dns`.
+
+Try to `curl` the nginx Pod from the previous section, both using the constructed FQDN, and just the service name.
+
+```bash
+curl service-lab.accounting.svc.cluster.local.
+curl service-lab
+```
+
+The first should succeed, and the second command should fail, since the `ubuntu` Pod we created is un the `default` namespace, while the `nginx` deployment is in `accounting`.
+
+Try again, but appending a `.accounting` to the end, and the command should succeed, this time. You can then exit the container.
+
+```bash
+curl service-lab.accounting
+exit
+```
+:::
+
+Now let's take a look at some of the services in the `kube-system` namespace.
+
+```bash
+kubectl -n kube-system get svc
+kubectl -n kube-system get svc kube-dns -o yaml
+```
+
+Make note of the selectors used in the `kube-dns` service.  Check the Pods which use this label. Then, look at the configuration of one of the CoreDNS Pods.
+
+```bash
+kubectl get pods -l k8s-app --all-namespaces
+kubectl -n kube-system get pod coredns-<unique ID> -o yaml
+```
+
+Notice there is a mounted ConfigMap.  Looks the the ConfigMaps in the `kube-system` namespace and then view the `coredns` ConfigMap.
+
+```bash
+kubectl -n kube-system get configmaps
+kubectl -n kube-system get configmaps coredns -o yaml
+```
+
+You should see the `cluster.local` domain there.
+
+<!-- TODO: Continue at 8 -->
