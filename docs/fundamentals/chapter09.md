@@ -346,4 +346,113 @@ kubectl -n kube-system get configmaps coredns -o yaml
 
 You should see the `cluster.local` domain there.
 
-<!-- TODO: Continue at 8 -->
+Let's make a simple edit to the ConfigMap, so that `test.io` redirects to `cluster.local` by using a rewrite statement.
+
+```bash
+kubectl -n kube-system edit configmaps coredns
+```
+
+Then add `rewrite name regex (.*)\.test\.io {1}.default.svc.cluster.local` as the first line under the line starting with `.:53`.
+
+Once the ConfigMap is edited, delete the `coredns` Pods so that they recreate looking at the new ConfigMap.
+
+```bash
+kubectl -n kube-system delete pod coredns-<unique ID 1> coredns-<unique ID 2>
+```
+
+Now create a new web server deployment and a ClusterIP associated with it.  Then check the service to get the ClusterIP address and log into the `ubuntu` container from previous steps.
+
+```bash
+kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --type=ClusterIP --port=80
+kubectl get svc
+kubectl exec -it ubuntu -- /bin/bash
+```
+
+:::important
+Now, in the shell of the ubuntu container, use `dig` on the ClusterIP of the new `nginx` service that we retrieved in the last step to do the reverse lookup. Use the address you find in the reverse lookup to do a forward lookup
+
+```bash
+dig -x <nginx ClusterIP>
+dig nginx.default.svc.cluster.local.
+```
+
+Then try the FQDN but using the alias we created using the rewrite command in the ConfigMap.
+
+```bash
+dig nginx.test.io
+exit
+```
+
+You should see the answer section uses the original name, not the requested FQDN.
+:::
+
+Now, let's edit the rewrite command in the `coredns` ConfigMap to add an answer.
+
+```bash
+kubectl -n kube-system edit configmaps coredns
+```
+
+Change the rewrite line we added before to the following:
+
+```
+rewrite stop {
+    name regex (.*)\.test\.io {1}.default.svc.cluster.local
+    answer name (.*)\.default\.svc\.cluster\.local {1}.test.io
+}
+```
+
+Then delete the pods again as we did before and exec into the `ubuntu` Pod again.
+
+```bash
+kubectl -n kube-system delete pod coredns-<unique ID 1> coredns-<unique ID 2>
+kubectl exec -it ubuntu -- /bin/bash
+```
+
+:::important
+Once inside the Pod try the dig command again on the FQDN.
+
+```bash
+dig nginx.test.io
+exit
+```
+
+This time, in the answer, we see the FQDN we used as an argument to the `dig` command is shown.
+:::
+
+Now delete the `ubuntu` Pod.
+
+```bash
+kubectl delete -f nettools.yaml
+```
+
+
+### Lab 9.4 - Use labels to manage resources
+
+First, try to delete all pods with the `system` label having a value of `secondary`. Then view the Pods again.
+
+```bash
+kubectl delete pods -l system=secondary --all-namespaces
+kubectl -n accounting get pods
+```
+
+You should see two new pods running, as the controller responsible for the pods still existed. Get the deployments and show the labels. Then delete the deployment responsible for the pods.
+
+```bash
+kubectl -n accounting get deploy --show-labels
+kubectl -n accounting delete deploy -l system=secondary
+```
+
+Finally, remove the label we added to the node earlier.  Note the `-` after the label name we want to remove, in this case being `system`.
+
+```bash
+kubectl label node <node name> system-
+```
+
+
+## Knowledge check
+
+- __`ClusterIP`__, __`NodePort`__, __`LoadBalancer`__, and __`ExternalName`__ are all types of Kubernetes services.
+- The __`kube-proxy`__ watches the API server for configuration changes and iptable updates
+- A __`LoadBalancer`__ is the type of service that spreads packets among pods in a deployment automatically
+- You can use __`kubectl proxy`__ to start a local proxy, helpful for development and testing
