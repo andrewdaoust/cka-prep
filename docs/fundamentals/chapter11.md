@@ -49,7 +49,7 @@ Like any ingress controller, there is come configuration required to deploy it p
 
 ### Ingress API resources
 
-A typical INgress object looks like the this:
+A typical Ingress object looks like the this:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -87,4 +87,21 @@ You can check all that was deployed with the sample by running `kubectl get pods
 
 
 ### Creating an ingress rule
+
+Creating an ingress rule is fairly simple.  First let's assume we have a running pod and service.
+
+```bash
+kubectl run ghost --image=ghost
+kubectl expose deployments ghost --port=2368
+```
+
+Now you could apply the ingress rules we defined with the example in [Ingress API resources](#ingress-api-resources)section. Once the ingress is created, the you should be able to access the application external to the cluster.
+
+
+### Multiple ingress rules
+
+If you have multiple services, you could also define multiple rules in the ingress definition. To do this you would just add to the list defined under the `rules` section of the manifest.
+
+
+### Intelligent connected proxies
 
