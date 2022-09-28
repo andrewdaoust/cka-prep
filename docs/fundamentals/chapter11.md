@@ -105,3 +105,6 @@ If you have multiple services, you could also define multiple rules in the ingre
 
 ### Intelligent connected proxies
 
+If you want to do things like service discovery, rate limiting, traffic management, or advanced metrics, you will likely need to implement a service mesh.  A service mesh consists of edge and embedded proxies that talk to each another to handle traffic based on rules from a control plane.
+
+There are many options for service meshes, with some of the most popular being Envoy, Istio, and linkerd
