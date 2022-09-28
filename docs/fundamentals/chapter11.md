@@ -107,4 +107,34 @@ If you have multiple services, you could also define multiple rules in the ingre
 
 If you want to do things like service discovery, rate limiting, traffic management, or advanced metrics, you will likely need to implement a service mesh.  A service mesh consists of edge and embedded proxies that talk to each another to handle traffic based on rules from a control plane.
 
-There are many options for service meshes, with some of the most popular being Envoy, Istio, and linkerd
+There are many options for service meshes, with some of the most popular being Envoy, Istio, and linkerd.
+
+| ![service mesh example](img/ch11-istio-service-mesh.png) |
+|:--:|
+| <b>Example of a service mesh from Istio</b>|
+
+
+- __Envoy__ - a modular and extensible proxy. It is popular due to the open construction, modularity, and it's dedication to remain unmonetized. It is common to use Envoy for as a data plane under near other tools in a service mesh.
+- __Istio__ - a set of tools that leverages Envoy's proxies to construct a multi-component control plane.  It is intended to be platform independent.
+- __linkerd__ - service mesh built for ease and speed of deployment and for being ultralight.
+
+
+## Lab Exercises
+
+### Lab 11.1 - Service mesh
+
+First we will install linkerd.  Make sure all the installation steps are successful by reviewing the output of each command.
+
+```bash
+curl -sL run.linkerd.io/install | sh
+export PATH=$PATH:/home/ubuntu/.linkerd2/bin
+echo "export PATH=$PATH:/home/ubuntu/.linkerd2/bin" >> $HOME/.bashrc
+linkerd check --pre
+linkerd install --crds | kubectl apply -f -
+linkerd install | kubectl apply -f -
+linkerd check
+linkerd viz install | kubectl apply -f -
+linkerd viz check
+linkerd viz dashboard &
+```
+
