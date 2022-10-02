@@ -131,10 +131,65 @@ export PATH=$PATH:/home/ubuntu/.linkerd2/bin
 echo "export PATH=$PATH:/home/ubuntu/.linkerd2/bin" >> $HOME/.bashrc
 linkerd check --pre
 linkerd install --crds | kubectl apply -f -
-linkerd install | kubectl apply -f -
+linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
 linkerd check
 linkerd viz install | kubectl apply -f -
 linkerd viz check
 linkerd viz dashboard &
 ```
+
+The GUI for linkerd is enabled on localhost by default. We need to edit the `web` deployment and service to allow for access of the GUI outside the cluster since we are running in a cloud provider.
+
+For the deployment, in the container args, find the `enforce-host` line and remove the value after the `=`.
+
+On the service, add the `nodePort` to the `http` port with some high valued port number that is easy to remember and set the service `type` to a `NodePort`.
+
+```bash
+kubectl -n linkerd-viz edit deploy web
+kubectl -n linkerd-viz edit svc web
+```
+
+Test access to your public IP.
+
+```bash
+curl ifconfig.io
+```
+
+Now use the public IP and the NodePort number you set to access the GUI in a browser on your local machine.
+
+With the GUI accessible externally we can now add the annotations we need for linkerd to watch those objects. linkerd can do this for us by piping `kubectl` commands to `linkerd` and then back to `kubectl`. You should see an error about the creation of the object but it should work fine. The view the GUI again and you should see the `accounting` namespaces are meshed.
+
+However, let's first create a deployment and expose it with a service to use in the service mesh.
+
+```bash
+kubectl -n accounting create deploy nginx --image=nginx
+kubectl -n accounting expose deployment nginx --type=ClusterIP --port=80
+```
+
+Then we will inject the annotations.
+
+```bash
+kubectl -n accounting get deploy nginx -o yaml | linkerd inject - | kubectl apply -f -
+```
+
+Then we will want to generate some traffic to pods and watch that traffic in the UI. We'll use the `nginx` service we just created.
+
+```bash
+kubectl -n accounting get svc
+curl <nginx ClusterIP>
+```
+
+In the UI you should see some HTTP metrics in the accounting namespace. Now let's scale up the `nginx` deployment to 5 replicas and then generate traffic to them.
+
+```bash
+kubectl -n accounting scale deploy nginx --replicas=5
+curl <nginx ClusterIP>
+curl <nginx ClusterIP>
+curl <nginx ClusterIP>
+curl <nginx ClusterIP>
+curl <nginx ClusterIP>
+curl <nginx ClusterIP>
+```
+
+In the UI we should see 5 replicas being meshed in the namespace as well as some other statistics.
 
