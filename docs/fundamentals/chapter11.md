@@ -193,3 +193,100 @@ curl <nginx ClusterIP>
 
 In the UI we should see 5 replicas being meshed in the namespace as well as some other statistics.
 
+
+### Lab 11.2 - Ingress controller
+
+Bow we will use Helm to install an ingress controller.
+
+First, we will want to create two deployments, one called `web-one` running httpd, and another called `web-two` running nginx.
+
+```bash
+kubectl create deployment web-one --image=httpd
+kubectl create deployment web-tow --image=nginx
+kubectl expose deployment web-one --type=ClusterIP --port=80
+kubectl expose deployment web-two --type=ClusterIP --port=80
+```
+
+Linkerd does not have a bundled ingress controller ao we need to install on the cluster ourselves to manage traffic. We will use a Helm chart to do this. Let's search for `ingress` with Helm and then install the popular nginx ingress controller.
+
+```bash
+helm search hub ingress
+helm repo add ingress-nginx http://kubernetes.github.io/ingress-nginx
+helm repo update
+```
+
+Now we will download the chart, and update the `values.yaml` so that the ingress controller uses a DaemonSet instead of a Deployment by changing the `kind` field.
+
+```bash
+helm fetch ingress-nginx/ingress-nginx --untar
+cd ingress-nginx
+vim values.yaml
+```
+
+Then, we will install the controller. Then watch for the service to come up.
+
+```bash
+helm install myingress .
+cd ..
+kubectl get ingress --all-namespaces -w
+kubectl get services -o wide myingress-ingress-nginx-controller
+kubectl get pod --all-namespaces | grep nginx
+```
+
+Once the ingress controller is up and running, we can set up the ingress rules.
+
+```bash
+vim ingress.yaml
+```
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-test
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  namespace: default
+spec:
+  rules:
+  - host: www.external.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web-one
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}
+```
+
+And now with the ingress rule defined, we can create it and verify it is working.
+
+```bash
+kubectl create -f ingress.yaml
+kubectl get ingress
+kubectl get pod -o wide | grep myingress
+curl <Pod IP>
+```
+
+At this point you should see you got a 404 error response from your curl.  Now let's check the service (don't use the admission controller that you will see).
+
+```bash
+kubectl get svc | grep ingress
+curl <myingress-ingress-nginx-controller service IP>
+```
+
+Again you should see that you are getting a 404 error. Let's try it again, this time passing a header matching the URL to one of the services we created earlier.  If it works you should see a default nginx/httpd server page.
+
+```bash
+curl -H "Host: www.external.com" http://<myingress-ingress-nginx-controller service IP>
+```
+
+With that working we can then add the annotations for linkerd. Again, you will see some warnings but it should work.
+
+```bash
+kubectl get ds myingress-ingress-nginx-controller -o yaml | linkerd inject --ingress - | kubectl apply -f -
+```
