@@ -3,6 +3,8 @@ id: chapter11
 title: Ingress
 ---
 
+import { Terminal } from '@site/src/components/Terminal';
+
 ## Course Reading
 
 ### Learning objectives
@@ -287,6 +289,8 @@ curl -H "Host: www.external.com" http://<myingress-ingress-nginx-controller serv
 
 With that working we can then add the annotations for linkerd. Again, you will see some warnings but it should work.
 
-```bash
-kubectl get ds myingress-ingress-nginx-controller -o yaml | linkerd inject --ingress - | kubectl apply -f -
-```
+<Terminal lines={
+  [{ 
+    text: "kubectl get ds myingress-ingress-nginx-controller -o yaml | linkerd inject --ingress - | kubectl apply -f -"
+  }]
+} />
