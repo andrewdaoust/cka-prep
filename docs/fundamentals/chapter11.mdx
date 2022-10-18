@@ -74,11 +74,20 @@ spec:
 
 Like all object, you can manage Ingress objects with `kubectl`.
 
-```bash
-kubectl get ingress
-kubectl delete ingress <ingress name>
-kubectl edit ingress <ingress name>
-```
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get ingress"
+    },
+    {
+      text: "kubectl delete ingress <ingress name>"
+    },
+    {
+      text: "kubectl edit ingress <ingress name>"
+    },
+  ]
+} />
 
 
 ### Deploying the ingress controller
@@ -92,10 +101,17 @@ You can check all that was deployed with the sample by running `kubectl get pods
 
 Creating an ingress rule is fairly simple.  First let's assume we have a running pod and service.
 
-```bash
-kubectl run ghost --image=ghost
-kubectl expose deployments ghost --port=2368
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl run ghost --image=ghost"
+    },
+    {
+      text: "kubectl expose deployments ghost --port=2368"
+    },
+  ]
+} />
+
 
 Now you could apply the ingress rules we defined with the example in [Ingress API resources](#ingress-api-resources)section. Once the ingress is created, the you should be able to access the application external to the cluster.
 
@@ -127,18 +143,40 @@ There are many options for service meshes, with some of the most popular being E
 
 First we will install linkerd.  Make sure all the installation steps are successful by reviewing the output of each command.
 
-```bash
-curl -sL run.linkerd.io/install | sh
-export PATH=$PATH:/home/ubuntu/.linkerd2/bin
-echo "export PATH=$PATH:/home/ubuntu/.linkerd2/bin" >> $HOME/.bashrc
-linkerd check --pre
-linkerd install --crds | kubectl apply -f -
-linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
-linkerd check
-linkerd viz install | kubectl apply -f -
-linkerd viz check
-linkerd viz dashboard &
-```
+<Terminal lines={
+  [
+    {
+      text: "curl -sL run.linkerd.io/install | sh"
+    },
+    {
+      text: "export PATH=$PATH:/home/ubuntu/.linkerd2/bin"
+    },
+    {
+      text: 'echo "export PATH=$PATH:/home/ubuntu/.linkerd2/bin" >> $HOME/.bashrc'
+    },
+    {
+      text: "linkerd check --pre"
+    },
+    {
+      text: "linkerd install --crds | kubectl apply -f -"
+    },
+    {
+      text: "linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -"
+    },
+    {
+      text: "linkerd check"
+    },
+    {
+      text: "linkerd viz install | kubectl apply -f -"
+    },
+    {
+      text: "linkerd viz check"
+    },
+    {
+      text: "linkerd viz dashboard &"
+    },
+  ]
+} />
 
 The GUI for linkerd is enabled on localhost by default. We need to edit the `web` deployment and service to allow for access of the GUI outside the cluster since we are running in a cloud provider.
 
@@ -146,16 +184,26 @@ For the deployment, in the container args, find the `enforce-host` line and remo
 
 On the service, add the `nodePort` to the `http` port with some high valued port number that is easy to remember and set the service `type` to a `NodePort`.
 
-```bash
-kubectl -n linkerd-viz edit deploy web
-kubectl -n linkerd-viz edit svc web
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n linkerd-viz edit deploy web"
+    },
+    {
+      text: "kubectl -n linkerd-viz edit svc web"
+    },
+  ]
+} />
 
 Test access to your public IP.
 
-```bash
-curl ifconfig.io
-```
+<Terminal lines={
+  [
+    {
+      text: "curl ifconfig.io"
+    },
+  ]
+} />
 
 Now use the public IP and the NodePort number you set to access the GUI in a browser on your local machine.
 
@@ -163,35 +211,67 @@ With the GUI accessible externally we can now add the annotations we need for li
 
 However, let's first create a deployment and expose it with a service to use in the service mesh.
 
-```bash
-kubectl -n accounting create deploy nginx --image=nginx
-kubectl -n accounting expose deployment nginx --type=ClusterIP --port=80
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n accounting create deploy nginx --image=nginx"
+    },
+    {
+      text: "kubectl -n accounting expose deployment nginx --type=ClusterIP --port=80"
+    },
+  ]
+} />
 
 Then we will inject the annotations.
 
-```bash
-kubectl -n accounting get deploy nginx -o yaml | linkerd inject - | kubectl apply -f -
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n accounting get deploy nginx -o yaml | linkerd inject - | kubectl apply -f -"
+    },
+  ]
+} />
 
 Then we will want to generate some traffic to pods and watch that traffic in the UI. We'll use the `nginx` service we just created.
 
-```bash
-kubectl -n accounting get svc
-curl <nginx ClusterIP>
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n accounting get svc"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+  ]
+} />
 
 In the UI you should see some HTTP metrics in the accounting namespace. Now let's scale up the `nginx` deployment to 5 replicas and then generate traffic to them.
 
-```bash
-kubectl -n accounting scale deploy nginx --replicas=5
-curl <nginx ClusterIP>
-curl <nginx ClusterIP>
-curl <nginx ClusterIP>
-curl <nginx ClusterIP>
-curl <nginx ClusterIP>
-curl <nginx ClusterIP>
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n accounting scale deploy nginx --replicas=5"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+    {
+      text: "curl <nginx ClusterIP>"
+    },
+  ]
+} />
 
 In the UI we should see 5 replicas being meshed in the namespace as well as some other statistics.
 
@@ -202,44 +282,92 @@ Bow we will use Helm to install an ingress controller.
 
 First, we will want to create two deployments, one called `web-one` running httpd, and another called `web-two` running nginx.
 
-```bash
-kubectl create deployment web-one --image=httpd
-kubectl create deployment web-tow --image=nginx
-kubectl expose deployment web-one --type=ClusterIP --port=80
-kubectl expose deployment web-two --type=ClusterIP --port=80
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl create deployment web-one --image=httpd"
+    },
+    {
+      text: "kubectl create deployment web-tow --image=nginx"
+    },
+    {
+      text: "kubectl expose deployment web-one --type=ClusterIP --port=80"
+    },
+    {
+      text: "kubectl expose deployment web-two --type=ClusterIP --port=80"
+    },
+  ]
+} />
+
+
 
 Linkerd does not have a bundled ingress controller ao we need to install on the cluster ourselves to manage traffic. We will use a Helm chart to do this. Let's search for `ingress` with Helm and then install the popular nginx ingress controller.
 
-```bash
-helm search hub ingress
-helm repo add ingress-nginx http://kubernetes.github.io/ingress-nginx
-helm repo update
-```
+<Terminal lines={
+  [
+    {
+      text: "helm search hub ingress"
+    },
+    {
+      text: "helm repo add ingress-nginx http://kubernetes.github.io/ingress-nginx"
+    },
+    {
+      text: "helm repo update"
+    },
+  ]
+} />
 
 Now we will download the chart, and update the `values.yaml` so that the ingress controller uses a DaemonSet instead of a Deployment by changing the `kind` field.
 
-```bash
-helm fetch ingress-nginx/ingress-nginx --untar
-cd ingress-nginx
-vim values.yaml
-```
+<Terminal lines={
+  [
+    {
+      text: "helm fetch ingress-nginx/ingress-nginx --untar"
+    },
+    {
+      text: "cd ingress-nginx"
+    },
+    {
+      text: "vim values.yaml",
+      dir: "~/ingress-nginx"
+    },
+  ]
+} />
 
 Then, we will install the controller. Then watch for the service to come up.
 
-```bash
-helm install myingress .
-cd ..
-kubectl get ingress --all-namespaces -w
-kubectl get services -o wide myingress-ingress-nginx-controller
-kubectl get pod --all-namespaces | grep nginx
-```
+<Terminal lines={
+  [
+    {
+      text: "helm install myingress .",
+      dir: "~/ingress-nginx"
+    },
+    {
+      text: "cd ..",
+      dir: "~/ingress-nginx"
+    },
+    {
+      text: "kubectl get ingress --all-namespaces -w"
+    },
+    {
+      text: "kubectl get services -o wide myingress-ingress-nginx-controller"
+    },
+    {
+      text: "kubectl get pod --all-namespaces | grep nginx"
+    },
+  ]
+} />
+
 
 Once the ingress controller is up and running, we can set up the ingress rules.
 
-```bash
-vim ingress.yaml
-```
+<Terminal lines={
+  [
+    {
+      text: "vim ingress.yaml"
+    },
+  ]
+} />
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -267,25 +395,46 @@ status:
 
 And now with the ingress rule defined, we can create it and verify it is working.
 
-```bash
-kubectl create -f ingress.yaml
-kubectl get ingress
-kubectl get pod -o wide | grep myingress
-curl <Pod IP>
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl create -f ingress.yaml"
+    },
+    {
+      text: "kubectl get ingress"
+    },
+    {
+      text: "kubectl get pod -o wide | grep myingress"
+    },
+    {
+      text: "curl <Pod IP>"
+    },
+  ]
+} />
 
 At this point you should see you got a 404 error response from your curl.  Now let's check the service (don't use the admission controller that you will see).
 
-```bash
-kubectl get svc | grep ingress
-curl <myingress-ingress-nginx-controller service IP>
-```
+<Terminal lines={
+  [
+    {
+      text: "kubectl get svc | grep ingress"
+    },
+    {
+      text: "curl <myingress-ingress-nginx-controller service IP>"
+    },
+  ]
+} />
 
 Again you should see that you are getting a 404 error. Let's try it again, this time passing a header matching the URL to one of the services we created earlier.  If it works you should see a default nginx/httpd server page.
 
-```bash
-curl -H "Host: www.external.com" http://<myingress-ingress-nginx-controller service IP>
-```
+<Terminal lines={
+  [
+    {
+      text: 'curl -H "Host: www.external.com" http://<myingress-ingress-nginx-controller service IP>'
+    }
+  ]
+} />
+
 
 With that working we can then add the annotations for linkerd. Again, you will see some warnings but it should work.
 

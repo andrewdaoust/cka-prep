@@ -1,6 +1,5 @@
 import React from "react";
 
-// TODO: Need to modify structure of props so that the dir can be passed
 export function Terminal(props) {
   return (
     <div style={{ borderRadius: "10px" }}>
@@ -9,6 +8,16 @@ export function Terminal(props) {
     </div>
   );
 }
+
+// <Terminal lines={
+//   [
+//     {
+//       text: "kubectl create -f ingress.yaml",
+//       dir: "" // * OPTIONAL
+//     },
+// 
+//   ]
+// } />
 
 function HeaderButton(props) {
   return (
@@ -58,10 +67,14 @@ function TerminalText(props) {
     <div
       style={{
         backgroundColor: "black",
-        color: "green",
+        color: "#00ff01",
         fontFamily: "monospace",
         borderBottomLeftRadius: "10px",
         borderBottomRightRadius: "10px",
+        paddingTop: "5px",
+        paddingBottom: "5px",
+        paddingLeft: "4px",
+        marginBottom: "10px"
       }}
     >
       {lines}
