@@ -278,7 +278,7 @@ In the UI we should see 5 replicas being meshed in the namespace as well as some
 
 ### Lab 11.2 - Ingress controller
 
-Bow we will use Helm to install an ingress controller.
+Now we will use Helm to install an ingress controller.
 
 First, we will want to create two deployments, one called `web-one` running httpd, and another called `web-two` running nginx.
 
@@ -288,7 +288,7 @@ First, we will want to create two deployments, one called `web-one` running http
       text: "kubectl create deployment web-one --image=httpd"
     },
     {
-      text: "kubectl create deployment web-tow --image=nginx"
+      text: "kubectl create deployment web-two --image=nginx"
     },
     {
       text: "kubectl expose deployment web-one --type=ClusterIP --port=80"
@@ -301,7 +301,7 @@ First, we will want to create two deployments, one called `web-one` running http
 
 
 
-Linkerd does not have a bundled ingress controller ao we need to install on the cluster ourselves to manage traffic. We will use a Helm chart to do this. Let's search for `ingress` with Helm and then install the popular nginx ingress controller.
+Linkerd does not have a bundled ingress controller so we need to install on the cluster ourselves to manage traffic. We will use a Helm chart to do this. Let's search for `ingress` with Helm and then install the popular nginx ingress controller.
 
 <Terminal lines={
   [
@@ -334,7 +334,7 @@ Now we will download the chart, and update the `values.yaml` so that the ingress
   ]
 } />
 
-Then, we will install the controller. Then watch for the service to come up.
+Then, we will install the controller. Then watch for the service to come up. When getting the ingress, you should see no resource available yet. We will create that later.
 
 <Terminal lines={
   [
@@ -347,7 +347,7 @@ Then, we will install the controller. Then watch for the service to come up.
       dir: "~/ingress-nginx"
     },
     {
-      text: "kubectl get ingress --all-namespaces -w"
+      text: "kubectl get ingress --all-namespaces"
     },
     {
       text: "kubectl get services -o wide myingress-ingress-nginx-controller"
@@ -412,7 +412,7 @@ And now with the ingress rule defined, we can create it and verify it is working
   ]
 } />
 
-At this point you should see you got a 404 error response from your curl.  Now let's check the service (don't use the admission controller that you will see).
+At this point you should see you got a 404 error response from your curl.  Now let's check the LoadBalancer service (don't use the admission controller that you will see).
 
 <Terminal lines={
   [
@@ -443,3 +443,45 @@ With that working we can then add the annotations for linkerd. Again, you will s
     text: "kubectl get ds myingress-ingress-nginx-controller -o yaml | linkerd inject --ingress - | kubectl apply -f -"
   }]
 } />
+
+Now let's update the ingress with a new rule. Edit the ingress` and all the following to `spec.rules` field.
+
+<Terminal lines={
+  [
+    {
+      text: 'kubectl edit ingress ingress-test'
+    }
+  ]
+} />
+
+```yaml
+  - host: internal.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: web-one
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpec
+```
+
+Now test the ingress rule by `curl`ing with the new header.
+
+<Terminal lines={
+  [
+    {
+      text: 'curl -H "Host: internal.org" http://<myingress-ingress-nginx-controller service IP>'
+    }
+  ]
+} />
+
+You should see the nginx default page.
+
+
+## Knowledge check
+
+- According to the documentation, Kubernetes currently support __3__ ingress controllers (AWS, GCE, and nginx)
+- The main reason to use an ingress controller is for __efficiency__
+- Both L4 and l& traffic can be configured
