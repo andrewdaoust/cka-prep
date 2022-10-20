@@ -156,3 +156,111 @@ You should be able to use node affinity to do the same thing as a `nodSelector`.
 
 ### Scheduler profiles
 
+The scheduler can also be configured via scheduling profiles. They allow for configuration of __extension points__ where plugins can be used.  An extension point is one of the 12 stages of scheduling, where a plugin can be used to modify the of a scheduler.  The 12 are:
+
+- queueSort
+- perFilter
+- filter
+- postFilter
+- preScore
+- score
+- reserve
+- permit
+- preBind
+- bind
+- postBind
+- multiPoint
+
+Many plugins are enabled by default, and others can be enabled, to change how the scheduler chooses a node for a give podSpec.  The current plugin list can be [found here](https://kubernetes.io/docs/reference/scheduling/config/#profiles).
+
+A scheduler can have multiple profiles enabled, which potentially removes the need of having multiple schedulers.Each podSpec would need to declare a profile to use, otherwise the `default-scheduler` is used if none is configured.
+
+Profiles are what have replaced policies.
+
+
+### Pod affinity rules
+
+An example of affinity may be desiring two pods to be co-located since they often communicate and share data.
+
+An example of anti-affinity would be wanting two pods running on separate nodes to increase fault tolerance.
+
+These settings are used by the scheduler to look at the pods currently running and their labels. The scheduler then must interrogate each node and keep track of the labels on running nodes, and because of this, clusters larger than several hundred nodes can see significant performance degradation.  Pod affinity rules use `In`, `NotIn`, `Exists`, and `DoesNotExist` operators.
+
+
+#### `requiredDuringSchedulingIgnoredDuringExecution`
+
+The pod will not be scheduled to a node unless the operator is true.  If the operator becomes false in the future, the pod continues to run. This can be seen as a hard setting.
+
+
+#### `preferredDuringSchedulingIgnoredDuringExecution`
+
+Similar to `requiredDuringSchedulingIgnoredDuringExecution`, but if no node with the desired setting is present, it will be scheduled anyway.  This declares a preference rather than requirement.
+
+
+#### `podAffinity`
+
+This is used to schedule pods together on the same node.
+
+
+#### `podAntiAffinity`
+
+And this is used to keep pods from being scheduled on the same node.
+
+
+```yaml
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: security
+            operator: In
+            values:
+            - S1
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: security
+              operator: In
+              values:
+              - S2
+```
+
+Here is an example of pod affinity where a specific label needs to be matched for the Pod to be scheduled and started.  However, this label could be removed in the future and the Pod would still run.
+
+If no node is found with another pod running with a `security=S1` label, then the pod remains unscheduled and `pending` until the condition is met.
+
+In the pod anti affinity example, it is preferred that a node with no pods matching a `security=S1` label be found.  Also, because this is a preference, the pod will still run, but we are able to provide a weight to influence the scheduler.  Weights can be from 1 to 100.
+
+
+### Node affinity rules
+
+Aside from pod to pod affinity, we can also have pod to node affinity, which is managed by `nodeAffinity`.  It is similar to `nodeSelector` and should one day replace it in later versions of the API.  Instead of labels on other pods, `nodeAffinity` uses the labels on the nodes, so there is much less performance impact than with pod affinity.
+
+Node affinity also uses the operators `In`, `NotIn`, 'Exists` and `DoesNotExist`. `requiredDuringSchedulingIgnoredDuringExecution` and `preferredDuringSchedulingIgnoredDuringExecution` are also applicable for node affinity.
+
+
+```yaml
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: discspeed
+            operator: In
+            values:
+            - quick
+            - fast
+```
+
+Here in our example, our pod to be scheduled will prefer nodes that have a label with key `discspeed` and a value of `fast` or `quick`.
+
+
+### Taints
+
