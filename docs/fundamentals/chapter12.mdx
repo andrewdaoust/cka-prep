@@ -18,3 +18,141 @@ import { Terminal } from '@site/src/components/Terminal';
 
 ### kube-scheduler
 
+Scheduling becomes more important as a deployment of Kubernetes grows and becomes more diverse.  It's the kube-scheduler that handles this task.
+
+Users are able to set pod priority, which allows other less important pods to be evicted if need be so that the higher priority pod can be scheduled.  The scheduler will keep track of the nodes in your cluster, filters them, and then uses priority functions to determine the best node to schedule a pod on.  Once determines, the pod specification is sent to that node's kubelet to be created.
+
+Scheduling decisions can be influenced by using labels on either the node or pod.  Labels for podAffinity, taints, and bindings allow more configuration of how a pod is assigned to a node. These labels do not have to be drastic either, they can serve the function, for example, of stating a preference of a Pod one where to be scheduled, but if that can not occur it could be scheduled somewhere else.  We will oftentimes see _require_ used in the name of parameters, but in reality this is more of a preference. Some setting will also evict pods if the conditions are no longer met (e.g. `requiredDuringScheduling` or `requiredDuringExecution`).
+
+Custom schedulers can also be configured but need to be added to the cluster manually.
+
+
+### Filtering (predicates)
+
+The scheduler runs through a list of filters, or __predicates__, to find which nodes are available, and then ranks the nodes using priority functions.  The node that ranks the highest is chosen by the scheduler. 
+
+The following are the predicates used:
+- PodFitsHostPorts
+- PodFitsHost
+- PodFitsResources
+- MatchNodeSelector
+- NoVolumeZoneConflict
+- NoDiskConflict
+- MaxCSIVolumeCount
+- PodToleratesNodeTaints
+- CheckVolumeBinding
+
+
+The predicates are evaluated in an order, which can be configured. This allows for the least amount of checks possible for the scheduler.
+
+These predicates work to filter out the nodes for certain conditions. For example, the `PodFitsResources` would filter out any nodes that do not have the required resources for the pod pending creation.
+
+Prior to v1.23 you could use a `kind: Policy` to order and give weight to certain predicates. Policies are now depreciated.
+
+
+### Scoring (Priorities)
+
+Priorities are used to weight resources. Unless the SelectorSpreadPriority (ranks nodes based on number of existing running pods) setting has been configured with pod and node affinity, the node with the least amount of pods will be chosen, which is a basic way of spreading pods about the cluster.
+
+Different priorities are used depending on cluster needs. For example, you could use an `ImageLocalityPriority` to favor nodes that have a container's image already downloaded.
+
+The list of priorities that can be used are:
+- SelectorSpreadPriority
+- InterPodAffinityPriority
+- LeastRequestedPriority
+- MostRequestedPriority
+- RequestedToCapacityRatioPriority
+- BalancedResourceAllocation
+- NodePreferAvoidPodsPriority
+- NodeAffinityPriority
+- TaintTolerationPriority
+- ImageLocalityPriority
+- ServiceSpreadingPriority
+- EqualPriority
+- EvenPodsSpreadPriority
+
+More detail on what each of these priorities do can be [found here](https://v1-22.docs.kubernetes.io/docs/reference/scheduling/policies/#priorities).
+
+Prior to v1.23 you could use a `kind: Policy` to specify the priorities to use in scoring.  As noted before, this is depreciated.
+
+
+### Scheduling Policies
+
+:::important
+Scheduling policies were [depreciated after v1.23](https://kubernetes.io/docs/reference/scheduling/policies/) in favor of scheduler configuration so newer versions will not have this capability. See more on scheduler configuration [here](https://kubernetes.io/docs/reference/scheduling/config/).
+:::
+
+By default, the scheduler has predicates and priorities it uses; these can be changed with scheduler policies however.
+
+```json
+{
+    "kind" : "Policy",
+    "apiVersion" : "v1",
+    "predicates" : [
+        {"name" : "MatchNodeSelector", "order": 6},
+        {"name" : "PodFitsHostPorts", "order": 2},
+        {"name" : "PodFitsResources", "order": 3},
+        {"name" : "NoDiskConflict", "order": 4},
+        {"name" : "PodToleratesNodeTaints", "order": 5},
+        {"name" : "PodFitsHost", "order": 1}
+    ],
+    "priorities" : [
+        {"name" : "LeastRequestedPriority", "weight" : 1},
+        {"name" : "BalancedResourceAllocation", "weight" : 1},       
+        {"name" : "ServiceSpreadingPriority", "weight" : 2},
+        {"name" : "EqualPriority", "weight" : 1}   
+    ],
+    "hardPodAffinitySymmetricWeight" : 10
+}
+```
+
+Typically, you would use the `--policy-config-file` to pass the files and the `--scheduler-name` to give the scheduler a name. You'd then have two schedulers running and can specify which to use in the pod specification.
+
+Having multiple schedulers opens up the potential for conflict in allocation of pods.  Each pod should declare which scheduler it should use, but if not and separate schedulers determine that a node is eligible, and both deploy to it and then cause the resources to no longer exist, then a conflict occurs. The local kubelet would then return these pods to the scheduler to reassign until eventually one succeeds and another node is chosen for the other pod.
+
+
+### Pod specification
+
+Most scheduling decisions are made off what's defined in the podSpec.  The fields that carry much of the weight for this are:
+
+#### `nodeName` and `nodeSelector`
+
+These options allow a Pod to be assigned to a single node or a node with a certain label.
+
+#### `affinity`
+
+Affinity and anti-affinity can be used to set a requirement or preference for which nodes to schedule to.  If using a preference, the matching node is chosen first, but other nodes are used if no match is found.
+
+#### `tolerations`
+
+Taints are placed on nodes so pods are not scheduled there for whatever reason.  Tolerations allow pods to ignore the taint and be scheduled on that node as long as other requirements for scheduling are met.
+
+#### `schedulerName`
+
+If you want to define the use of a custom scheduler, you could use the `schedulerName` field to do so.
+
+
+### Specifying the node label
+
+The `nodeSelector` field is a straightforward way to to target a nde or set of nodes for scheduling.  It used one or more key-value labels.
+
+For example:
+
+```yaml
+spec:
+  containers:
+  - name: redis
+    image: redis
+  nodeSelector:
+    net: fast
+```
+
+In the example we are using the `nodeSelector` to target any nodes with a `net` label and value of `fast`. Reminder that these labels and values are administrator created and are not actually necessarily tied to any properties of the hardware of the node.
+
+A pod remains in a pending state until a node is found with matching labels.
+
+You should be able to use node affinity to do the same thing as a `nodSelector`.
+
+
+### Scheduler profiles
+
