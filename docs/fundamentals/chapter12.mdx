@@ -264,3 +264,194 @@ Here in our example, our pod to be scheduled will prefer nodes that have a label
 
 ### Taints
 
+Taints are the opposite of node affinity.
+
+To repel a pod from being deploy on a node you can set a taint. Pod will not be scheduled to that node unless they have the proper toleration, nor will the node even be considered. Taints are configured as `key=value:effect`. Any valid `key`, `value` label can be used for the taint. 
+
+There are three kinds of effects that can be applied for a taint. For any node that has multiple taints, the scheduler just ignores the ones with matching tolerations and allow the others to still take effect.  
+
+#### `NoSchedule`
+
+A `NoSchedule` effect will not schedule the pod on a matching node, unless the Pod has a toleration of this type.  Existing pods will continue to run regardless of toleration.
+
+
+#### `PreferNoSchedule`
+
+A "soft" version of `NoSchedule`. The node with this taint will be avoided if possible. It is a preference, rather than requirement.
+
+
+#### `NoExecute`
+
+This taint will evacuate all existing pods and not allow future pods to be scheduled, except those with the correct toleration.  Pods with a `tolerationSeconds` set will wait however many configured seconds before eviction. Certain issues on a node may cause the kubelet to add 300 seconds tolerations to prevent unnecessary evictions.
+
+
+### Tolerations
+
+Tolerations can be set on a pod to negate the effect of a taint on the node.
+
+Tolerations can take two different operators, `Equal` and `Exists`. `Equal` is the default if an operator is not declared.
+
+Here's two examples of tolerations.
+
+```yaml title=equal-toleration.yaml
+tolerations:
+- key: "region"
+  operator: "Equal"
+  value: "us-east-1"
+  effect: "NoExecute"
+  tolerationSeconds: 3600
+```
+
+```yaml title=exists-toleration.yaml
+tolerations:
+- key: "example-key"
+  operator: "Exists"
+  effect: "NoSchedule"
+```
+
+In the `Equal` example, the pod will tolerate any nodes with a `NoExecute` taint for 3600 seconds and a label of `region=us-east-1`.
+
+In the `Exists` example, no value is taken, as the `Exist` just looks for the existence of the label key.  If no key was specified, the pod would tolerate all nodes with the configured effect.
+
+
+### Custom scheduler
+
+If the affinity and taints are not flexible enough you can write a custom scheduler. This is outside the scope of the fundamentals of Kubernetes, but a good starting point is the [existing scheduling code](https://github.com/kubernetes/kubernetes/tree/master/pkg/scheduler).
+
+If a podSpec does not declare the scheduler to use, then the default is chosen. If the pod declares a scheduler that is not running, it would sit as `Pending` forever.
+
+At the end of scheduling, the pod gets a binding specifying which pod it should run on.  Bindings are Kubernetes primitives in the `api/v1` group.  You could technically still schedule a pod without a scheduler running by defining a binding yourself.
+
+Multiple schedulers can be running at the same time. The scheduler can be views along with other information by running `kubectl get events`.
+
+
+## Lab Exercises
+
+### Lab 12.1 - Assign pods using labels
+
+This lab will walk through scheduling pods on specific nodes using labels.  While it is normally best to let the system distribute pods for you, sometimes there may be exceptions to this.  For example, you may want a pod to run on a certain node due to hardware considerations.
+
+First, let's get our list of nodes and view their current labels and taints.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get nodes"
+    },
+    {
+      text: "kubectl describe nodes | grep -A5 -i labels"
+    },
+    {
+      text: "kubectl describe nodes |grep -i taint"
+    },
+  ]
+} />
+
+Find the count of how many pods are running on each node. Take node of the difference.
+
+<Terminal lines={
+  [
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+For this exercice, we will make the cp node exclusive for VIP pods, and the worker for everything else. Then verify your new labels.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl label nodes <cp node name> status=vip"
+    },
+    {
+      text: "kubectl label nodes <worker node name> status=other"
+    },
+    {
+      text: "kubectl get nodes --show-labels"
+    },
+  ]
+} />
+
+Now, let's create a new Pod running four `busybox` containers. We'll use `nodeSelector` to choose the node we want to deploy on.
+
+<Terminal lines={
+  [
+    {
+      text: "vim vip.yaml"
+    },
+  ]
+} />
+
+```yaml title="vip.yaml"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vip
+spec:
+  containers:
+  - name: vip1
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: vip2
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: vip3
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: vip4
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  nodeSelector:
+    status: vip
+```
+
+Then deploy the Pod and verify it was deployed on the cp node. You should see an additional pod running on the cp and no change on the worker.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl create -f vip.yaml"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+Delete the pod, comment out `nodeSelector`, then recreate the deployment. The Pod should be able to schedule on either node now.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl delete pod vip"
+    },
+    {
+      text: "vim vip.yaml"
+    },
+    {
+      text: "kubectl create -f vip.yaml"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
