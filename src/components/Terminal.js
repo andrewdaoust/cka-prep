@@ -53,9 +53,10 @@ function HeaderBar() {
 
 function CodeLine(props) {
   let dir = props.dir ? props.dir : "~";
+  let node = props.node ? props.node : "cp";
 
   return (
-    <p style={{ margin: "0px", padding: "2px" }}>{`${dir}:$ ${props.text}`}</p>
+    <p style={{ margin: "0px", padding: "2px" }}>{`ubuntu@${node}:${dir} $ ${props.text}`}</p>
   );
 }
 

@@ -455,3 +455,208 @@ Delete the pod, comment out `nodeSelector`, then recreate the deployment. The Po
   ]
 } />
 
+Copy the `vip.yaml` file, replace references to `vip` with `other` and add back the `nodeSelector`.
+
+<Terminal lines={
+  [
+    {
+      text: "cp vip.yaml other.yaml"
+    },
+    {
+      text: "sed -i s/vip/other/g other.yaml"
+    },
+    {
+      text: "vim other.yaml"
+    },
+  ]
+} />
+
+Then create the new pod and verify where they get deployed.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl create -f other.yaml"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+Then delete the pods.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl delete pod vip other"
+    },
+  ]
+} />
+
+
+### Lab 12.2 - Using taints to control pod deployment
+
+First, create a new deployment and deploy it.
+
+<Terminal lines={
+  [
+    {
+      text: "vim taint.yaml"
+    },
+  ]
+} />
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taint-deployment
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.20.1
+        ports:
+        - containerPort: 80
+```
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl apply -f taint.yaml"
+    },
+  ]
+} />
+
+Then determine where the pods for the deployment were scheduled.
+
+<Terminal lines={
+  [
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+You'll likely see that some of the pods were sent to one or the other node. Now let's delete the deployment, verify the pods are gone, and apply a taint to force where the pods will be deployed. Then we will redeploy the `taint.yaml` deployment.
+
+Remember that the taints related to scheduling will have no effect on already running pods, while a `NoExecute` taint will evict currently running pods unless they have a matching toleration.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl delete deployment taint-deployment"
+    },
+    {
+      text: "kubectl taint nodes <worker node name> bubba=value:PreferNoSchedule"
+    },
+    {
+      text: "kubectl describe node | grep Taint"
+    },
+    {
+      text: "kubectl apply -f taint.yaml"
+    },
+  ]
+} />
+
+Verify the pods are up and running, the check where they were deployed to. Once you verify where the pods were deploy to, delete the deployment again.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get pods"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: "kubectl delete deployment taint-deployment"
+    },
+  ]
+} />
+
+Now let's untaint the node and apply a new one, this time using the `NoSchedule` effect. Then we will redeploy and check where the pods where scheduled.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl taint nodes <worker node name> bubba-"
+    },
+    {
+      text: "kubectl taint nodes <worker node name> bubba=value:NoSchedule"
+    },
+    {
+      text: "kubectl apply -f taint.yaml"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+Finally, we will use the `NoExecute` effect.  Do the same process of untainting, then retainting, and then verify the number of pods running per node.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl taint nodes <worker node name> bubba-"
+    },
+    {
+      text: "kubectl taint nodes <worker node name> bubba=value:NoExecute"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+  ]
+} />
+
+Finally remove that taint and see how the pods are reshuffled again. They will likely not be distributed the same as they were originally. Once done, delete the deployment for good.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl taint nodes <worker node name> bubba-"
+    },
+    {
+      text: 'kubectl describe node <cp node name> | grep "Non-terminated Pods"'
+    },
+    {
+      text: 'kubectl describe node <worker node name> | grep "Non-terminated Pods"'
+    },
+        {
+      text: "kubectl delete deployment taint-deployment"
+    },
+  ]
+} />
+
+
+## Knowledge check
+
+- Multiple scheduler __can__ be run at the same time
+- Labels and annotations are __not__ used for the same purpose
+- When a node is tainted, a pod requires a __toleration__ to be deployed to that node
+- __Not__ all taints cause pods to not run on a node
