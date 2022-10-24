@@ -75,6 +75,11 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 
 - [NAT](./chapter09.md#lab-9-2---configure-a-nodeport)
 
+## Chapter 13
+
+- [SELinux](./chapter13.md#basic-troubleshooting-steps)
+- [AppArmor](./chapter13.md#basic-troubleshooting-steps)
+
 ## Additional
 
 - CIDR

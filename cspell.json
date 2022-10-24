@@ -7,6 +7,7 @@
     "alloc",
     "Autoscaler",
     "cpus",
+    "dashboarding",
     "deamons",
     "distro",
     "distros",
