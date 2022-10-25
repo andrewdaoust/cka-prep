@@ -122,6 +122,177 @@ Once installed you could run `kubectl krew help` to view the documentation on ho
 
 More info about extending `kubectl` can be found in the [official docs](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/).
 
+Once `krew` is installed, make sure to add it to your `PATH`
 
-### Managing plugins
+<Terminal lines={
+  [
+    {
+      text: 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"'
+    },
+  ]
+} />
+
+| Subcommand  | Usage                                        |
+|-------------|----------------------------------------------|
+| `help`      | Explain usage of rest of commands            |
+| `info`      | Shows info about `kubectl` plugin specified  |
+| `install`   | Add new plugin to `kubectl`                  |
+| `list`      | Show installed plugins                       |
+| `search`    | Search for new plugins                       |
+| `uninstall` | Uninstall an existing plugin                 |
+| `update`    | Update local plugin index                    |
+| `upgrade`   | Upgrades local plugin index to newer version |
+| `version`   | Get version info for `krew`                  |
+
+
+#### Example: Sniffing traffic with Wireshark
+
+Cluster network traffic is encrypted which makes debugging potential networking issues more challenging. The `sniff` plugin for `kubectl` allows you to view traffic from within. It requires Wireshark to view graphical info.
+
+`sniff` uses the first container found unless specified with the `-c` option. Here's an example of its use:
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl sniff <pod name> -c <container name>"
+    },
+  ]
+} />
+
+
+### Logging tools
+
+Logging, like monitoring, is a vast topic with many available tools.
+
+Typically logs will be collected and aggregated locally before being ingested into some search engine.  Many software stacks exist for this purpose, with the most common being the ELK stack (Elasticsearch, Logstash, Kibana).
+
+The kubelet writes logs to local files, which the `kubectl log` command retrieves. For cluster-wide log aggregation, something like `Fluentd can be used.  The official Kubernetes docs also describe [how to architect](https://kubernetes.io/docs/concepts/cluster-administration/logging/) a logging solution.
+
+### Additional troubleshooting resources
+
+- [Troubleshooting applications](https://kubernetes.io/docs/tasks/debug/debug-application/)
+- [Troubleshooting clusters](https://kubernetes.io/docs/tasks/debug/debug-cluster/)
+- [Kubernetes issues](https://github.com/kubernetes/kubernetes/issues)
+
+
+## Lab Exercises
+
+### Lab 13.1 - Review log file locations
+
+If using a systemd based cluster, you can view the node level kubelet logs with `journalctl`. Each node will have different logs as they are specific to each node.
+
+<Terminal lines={
+  [
+    {
+      text: "journalctl -u kubelet | less"
+    },
+  ]
+} />
+
+Many major processes for the cluster are containerized. An example of finding and then viewing those logs for the kube-apiserver would be:
+
+<Terminal lines={
+  [
+    {
+      text: 'sudo find / -name "*apiserver*log"'
+    },
+    {
+      text: "sudo less <path to log file>"
+    },
+  ]
+} />
+
+You could do something simlar to find logs for things like the kube-proxy, CoreDNS, the kube-scheduler, and other controllers.
+
+If you are not running a systemd cluster and logs aren't collected via systemd, then you can view the logs in the following locations on the cp node:
+
+- `/var/log/kube-apiserver.log` for kube-apiserver logs
+- `/var/log/kube-scheduler.log` for kube-scheduler logs
+- `/var/log/kube-controller-manager.log` for kube-controller-manager logs
+- `/var/log/containers/` is the directory for any running container logs
+- `/var/log/pods/` is the directory for any running pod logs
+
+On the worker node, you would also be able to see `/var/log/kubelet.log` and `/var/log/kube-proxy.log`.
+
+
+### 13.2 - Viewing log output
+
+To view logs from running pods you can also use `kubectl` like so:
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get pods --all-namespaces"
+    },
+    {
+      text: "kubectl -n <namespace of pod> logs <pod name from desired ns>"
+    },
+  ]
+} />
+
+
+### 13.3 - Adding tools for monitoring and metrics
+
+Start by cloning the metrics-server repo and viewing the `README`
+
+<Terminal lines={
+  [
+    {
+      text: "git clone https://github.com/kubernetes-sigs/metrics-server.git"
+    },
+    {
+      text: "cd metrics-server"
+    },
+    {
+      text: "cat README.md"
+    },
+  ]
+} />
+
+Once you've read the README, install the required objects and verify they are there. Replace `latest` in the URL with a specific version if you need an older version.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+    },
+    {
+      text: "kubectl -n kube-system get pods"
+    },
+  ]
+} />
+
+Now edit the deployment to allow for insecure TLS.  Do this by adding `- --kubelet-insecure-tls` to the end of the container args.  You may also need to add `- --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname` as well. Once edited, make sure the pod is still running and not showing any errors in the logs.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n kube-system edit deployment metrics-server"
+    },
+    {
+      text: "kubectl -n kube-system get pods"
+    },
+    {
+      text: "kubectl -n kube-system logs <metrics-server pod name>"
+    },
+  ]
+} />
+
+Now check that the metrics for the nods and pods. Sometimes it may take a few minutes for the metrics to populate and not throw an error.
+
+<Terminal lines={
+  [
+    {
+      text: "sleep 120"
+    },
+    {
+      text: "kubectl top pods --all-namespaces"
+    },
+    {
+      text: "kubectl top nodes"
+    },
+  ]
+} />
+
+#### Configure dashboard
 
