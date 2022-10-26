@@ -244,7 +244,12 @@ Start by cloning the metrics-server repo and viewing the `README`
       text: "cd metrics-server"
     },
     {
-      text: "cat README.md"
+      text: "cat README.md",
+      dir: "metrics-server"
+    },
+    {
+      text: "cd ..",
+      dir: "metrics-server"
     },
   ]
 } />
@@ -296,3 +301,63 @@ Now check that the metrics for the nods and pods. Sometimes it may take a few mi
 
 #### Configure dashboard
 
+Firstly, it should be noted the dashboard is not necessarily as fully featured as the CLI, as those who develop the tooling typically use the CLI instead.
+
+Search the artifact hub for the `kubernetes-dashboard` chart from `helm`. Edit the `values.yaml` file and change the service type to a `NodePort`. Then install the chart with the name `dashboard`.
+
+<Terminal lines={
+  [
+    {
+      text: "helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/"
+    },
+    {
+      text: "helm fetch kubernetes-dashboard/kubernetes-dashboard --untar"
+    },
+    {
+      text: "cd kubernetes-dashboard"
+    },
+    {
+      text: "vim values.yaml",
+      dir: "kubernetes-dashboard"
+    },
+    {
+      text: "helm install dashboard .",
+      dir: "kubernetes-dashboard"
+    },
+    {
+      text: "cd ..",
+      dir: "kubernetes-dashboard"
+    },
+  ]
+} />
+
+We will still need to give the dashboard admin access to the rest of the cluster. In normal production cases, you'd probably not want to do this. First we'll find the right `securityaccount` (more about these later), then create a `clusterrolebinding`.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get serviceaccount"
+    },
+    {
+      text: "kubectl create clusterrolebinding dashaccess --clusterrole=cluster-admin --serviceaccount=default:dashboard-kubernetes-dashboard" 
+    },
+  ]
+} />
+
+Now navigate the the dashboard in your browser using the public IP of the server and the high number port (you can find this with a `kubectl get svc`).
+
+Select the token sign-in option, you can get this from the dashboard token. Once logged in, explore the dashboard's features.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl describe secret dashboard-kubernetes-dashboard-token-<unique id>"
+    },
+  ]
+} />
+
+
+## Knowledge check
+
+- Kubernetes does __not__ have built-in, cluster-wide logging
+- If a container does not generate logs, you could use a __sidecar container__ to generate and handle pod logging
