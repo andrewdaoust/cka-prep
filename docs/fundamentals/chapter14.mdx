@@ -1,0 +1,271 @@
+---
+id: chapter14
+title: Custom Resource Definitions
+---
+
+import { Terminal } from '@site/src/components/Terminal';
+
+## Course Reading
+
+### Learning objectives
+
+- Grow available Kubernetes objects
+- Deploy a custom resource definition (CRD)
+- Deploy a new resource and API endpoints
+- Discuss aggregates APIs
+
+
+### Custom Resources
+
+Kubernetes allows the flexibility to add your own dynamic resources to the cluster, outside the scope of those built-in.  Once a custom resource has been added, it can be created through the same methods of any other built-in resource, like with `kubectl`.
+
+For a custom resource to be made part of the API, it needs a controller to receive the specification for that object and work to maintain the object in that state. These custom controllers should handle all the tasks a human would have to take if deploying the application outside of Kubernetes.
+
+There are two methods for adding custom resource to the cluster that offer different levels of flexibility.  The less flexible option is to add a __custom resource definition__ (CRD). The more flexible option is to add __aggregated APIs__ (AA), which uses a new API server to be written and deployed in the cluster. Both options still manage custom resources outside the scope of the built-ins.
+
+With RBAC, you will need to allow access to the new CRD resources and controller.  When using an AA, you can use the typical auth methods or a different one.
+
+
+### Custom resource definitions
+
+When a new API object and controller is added via CRDs, the existing kube-apiserver can be used to monitor and control the object's state. A CRD will add a new path to the API, under the `apiextensions.k8s.io/v1` group.
+
+CRDs are the easiest way to add a new type of object to the cluster, although it is less flexible. Only the existing API functionality can be used, objects must respond to RESTful requests, and their state must be validated and stored in the same way built-in API objects do.
+
+CRDs also allow the new resources to be deployed in a namespace or cluster wide. The manifest uses the `scope` field and takes the value of either `Namespaced` or `Cluster` depending on how it should be deployed.
+
+#### Example
+
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: backups.stable.linux.com
+spec:
+  group: stable.linux.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: backups
+    singular: backup
+    shortNames:
+    - bks
+    kind: BackUp
+```
+
+Let's walk through each part of this example
+
+Like any manifest, we begin with the `apiVersion`, which for a CRD must be `apiextensions.k8s.io/v1`.
+
+Next is the kind, which for a CRD is `CustomResourceDefinition`.
+
+In the `metadata` field, the `name` must match the later defined spec.  It must have the structure of `<spec.names.plural>.<spec.group>`.
+
+Next is the `group` which is used to determine the endpoint in the API which is in the structure `/apis/<group>/<version>`, which for this example specifically is `/apis/stable/v1`.
+
+The `scope` determines if the objects must exist in a namespace or be cluster-wide.
+
+The `plural` field is what determines the end of the API url, so in this case it would be `/apis/stable/v1/backups`.
+
+The `singular` and `shortName` fields are used to make CLI easier.  This is the same ideas of being able to retrieve pods with `pods`, `pod` or `po`.
+
+Finally, the `spec.kind` field determines the camel cased name that would be used when writing a manifest for one of these objects.
+
+#### Defining the new object
+
+To then define the object the CRD creates would look something like this.
+
+```yaml
+apiVersion: "stable.linux.com/v1"
+kind: BackUp
+metadata:
+  name: new-backup-object
+spec:
+  timeSpec: "* * * * */5"
+  image: linux-backup-image
+replicas: 5
+```
+
+The `apiVersion` and the `kind` must match what is specified in the CRD.  The fields in `spec` all depend on the associated controller. If the controller has validation, it would check the values to be what is expected and error if it does not match. With no validation, only the existence of the needed fields is checked.
+
+### Optional hooks
+
+#### Finalizer
+
+Just like built-in objects, an asynchronous pre-delete hook called a `Finalizer` can be used.  When the API receives a `delete` request, the `metadata.deletionTimestamp` field is updated and then the configured finalizer is run. When a finalizer completes, it is removed from the list and the next one is processed, until the list is empty.
+
+```yaml
+metadata:
+  finalizer:
+  - finalizer.stable.linux.com
+```
+
+#### Validation
+
+Validation for custom objects can also be done using the OpenAPI v3 schema. This will check the properties being passed in a manifest defining the resource.
+
+```yaml
+validation:
+  openAPIV3Schema:
+    properties:
+      spec:
+        properties:
+          timeSpec:
+            type: string
+            pattern: '^(\d+|\*)(/\d+)?(\s+(\d+|\*)(/\d+)?){4}$'
+          replicas:
+            type: integer
+            minimum: 1
+            maximum: 10
+```
+
+Here `timeSpec` field must match a certain string pattern, and the `replicas` field must be an integer between 1 and 10.
+
+### Understanding Aggregated APIs
+
+Aggregated APIs allow adding more Kubernetes-like API servers to the cluster.  The additional servers are subordinate to the kube-apiserver, which will run the aggregation layer. Then when a new custom resource is requested, the aggregation layer will listen for any URLs and proxy them to the new API if it is responsible for that object.
+
+The aggregation layer can be enabled by adding the `enable-aggregator-routing=true` flag to the kube-apiserver start-up commands.
+
+Configuring TLS between components and RBAC rules is necessary.
+
+
+## Lab Exercises
+
+### Lab 14.1 - Create a Custom Resource Definition
+
+First view any existing CRDs on the cluster.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl get crd --all-namespaces"
+    },
+  ]
+} />
+
+You should see they are all for the Calico network plugin we used when building the cluster as well as for linkerd. If you were to look at the `calico.yaml` file we used when first building the cluster, you would see the `CustomResourceDefinition`s that where added.
+
+<Terminal lines={
+  [
+    {
+      text: "cat calico.yaml"
+    },
+  ]
+} />
+
+Having looked at some exampled, let's build our own.
+
+<Terminal lines={
+  [
+    {
+      text: "vim crd.yaml"
+    },
+  ]
+} />
+
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: crontabs.stable.example.com
+spec:
+  group: stable.example.com
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              cronSpec:
+                type: string
+              image:
+                type: string
+              replicas:
+                type: integer
+  scope: Namespaced
+  names:
+    plural: crontabs
+    singular: crontabs
+    shortNames:
+    - ct
+    kind: CronTab
+```
+
+Now create the CRD, view it among the others and describe it.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl create -f crd.yaml"
+    },
+    {
+      text: "kubectl get crd"
+    },
+    {
+      text: "kubectl describe crd crontabs.stable.example.com"
+    },
+  ]
+} />
+
+Now, let's create a new `CronTab` object.  Note that it will not do anything since there is no associated controller with this object.
+
+<Terminal lines={
+  [
+    {
+      text: "vim crontab.yaml"
+    },
+  ]
+} />
+
+```yaml
+apiVersion: "stable.example.com/v1"
+kind: CronTab
+metadata:
+  name: new-crontab
+spec:
+  cronSpec: "* */4 * * *"
+  # This image doesn't need to exist in this case
+  image: some-image
+```
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl create -f crontab.yaml"
+    },
+    {
+      text: "kubectl get crontabs"
+    },
+    {
+      text: "kubectl get ct"
+    },
+    {
+      text: "kubectl describe ct"
+    },
+  ]
+} />
+
+You can then delete the CRD, which should also remove the API endpoints and all objects.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl delete -f crd.yaml"
+    },
+    {
+      text: "kubectl get ct"
+    },
+  ]
+} />
+
+## Knowledge check
+
+- When adding a new API object to the kube-apiserver, we use a __Custom Resource Definition__
+- When we add a new API server that is subordinate to the kube-apiserver, we use __Aggregated APIs__
+- CRDs are __not__ required to live in a namespace

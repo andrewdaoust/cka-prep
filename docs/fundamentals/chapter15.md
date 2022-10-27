@@ -3,4 +3,17 @@ id: chapter15
 title: Security
 ---
 
-Notes from chapter 15 of Kubernetes Fundamentals
+import { Terminal } from '@site/src/components/Terminal';
+
+## Course Reading
+
+### Learning objectives
+
+- Explain the flow of API requests
+- Configure authorization rules
+- Examine authentication policies
+- Use network policies to restrict traffic
+
+
+### Overview
+
