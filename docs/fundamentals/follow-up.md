@@ -77,8 +77,8 @@ Being new to many of these topic, there is more to learn than just Kubernetes.  
 
 ## Chapter 13
 
-- [SELinux](./chapter13.md#basic-troubleshooting-steps)
-- [AppArmor](./chapter13.md#basic-troubleshooting-steps)
+- [SELinux](./chapter13.mdx#basic-troubleshooting-steps)
+- [AppArmor](./chapter13.mdx#basic-troubleshooting-steps)
 
 ## Additional
 
