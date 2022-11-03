@@ -145,3 +145,63 @@ You can learn more about each of the admission controllers and what they do in t
 
 
 ### Security contexts
+
+You can set security limitations on pods using what is called a security context.  These can be defined at the pod or container level as part of the manifest for the resource.
+
+Some examples of what you may use this for are 
+
+- limit UID of a process
+- limit Linux capabilities
+- filesystem group limitations
+
+Another example would be preventing a process from running as the root user. The definition of a Pod using this security context would look something like the following.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - image: nginx
+    name: nginx
+```
+
+When you try to deploy this pod to the cluster, it would fail and never become ready since `nginx` runs as the root user, but the security context would prevent this.
+
+More about configuring security contexts can be found in the [official docs](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+
+
+### Pod security policies
+
+Pod security policies (PSPs) automate the enforcement of security contexts.  A PSP is defined as a standard Kubernetes manifest like any other standard API object.  The policies are cluster level and govern what pods can do (including access permissions, what users to run as, etc).
+
+Similar to the example in the [security contexts section](#security-contexts), if you wanted to make sure all pods are not able to run as root, the you could define a PSP to enforce this.
+
+```yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted
+spec:
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: MustRunAsNonRoot
+  fsGroup:
+    rule: RunAsAny
+```
+
+For PSPs to be enabled, their associated admission controller plugin must be configured. These pair well with RBAC configuration to fine tune what users are allowed to run and the low level permissions their containers will have.
+
+:::note
+PSPs have been depreciated in v1.25 and their replacement, Pod Security Admission is in alpha
+:::
+
+
+### Network security policies
+
