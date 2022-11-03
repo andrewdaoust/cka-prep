@@ -100,3 +100,48 @@ The different authorization modes implement policies.  Request attributes are th
 
 ### RBAC and webhook modes
 
+#### RBAC
+
+RBAC is short for Role Based Access Control.
+
+All objects you can create in Kubernetes are modelled in the API and each object belongs to some group.  The resources allow for standard CRUD operations.  In Kubernetes YAML manifests, these operations are called __verbs__.  
+
+On top of these basic operations are rules, which act upon API groups, and roles are made up of sets or rules.  These roles scope a single namespace, or with `ClusterRoles` give scope across the entire cluster.
+
+These operations act on 1 or 3 subjects, user accounts (these are not API objects), service accounts, and groups (know as `clusterrolebinding` in `kubectl`).  RBAC then writes rules to allow or deny the requested operation by the user, role, or group.
+
+RBAC is complex but the basic flow is as follows:
+
+- Determine/create namespace
+- Create a cert for the user against the cluster CA. Since users aren't API objects outside auth is required, such as OpenSSL certs.
+- Set credential for the user to the namespace using a context
+- Create a role for the expected tasks
+- Bind the user to the role
+- Verify user has limited access
+
+Learn more about RBAC in the [official docs](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
+
+#### Webhook
+
+Webhooks are HTTP callbacks, usually a POST request that occurs when something happens to act as an event-notification.  Web applications that implement webhooks send POST requests to a URL when certain events occur.
+
+More about Kubernetes' webhooks mode can be found in the [official docs](https://kubernetes.io/docs/reference/access-authn-authz/webhook/).
+
+
+### Admission controller
+
+The final step for allowing an API request is admission control.
+
+An admission controller is software that has access to the content of the objects being requested. They will modify or validate this content and are the last layer that can deny the request.
+
+Starting in v1.13 of the kube-apiserver, admission controllers are compiled into the binary, instead of a list passed during execution.Admissions controllers are now needed for certain features to work and is not consider a mature feature.  To enable or disable certain admission controller plugins, you can pass startup options to the kube-apiserver.  Some examples:
+
+- `--enable-admission-plugins=Initializers,NamespaceLifecycle,LimitRanger`
+- `--disable-admission-plugins=PodNodeSelector`
+
+Change the names of the plugins you want to enable and disable.
+
+You can learn more about each of the admission controllers and what they do in the [official docs](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#what-does-each-admission-controller-do).
+
+
+### Security contexts
