@@ -205,3 +205,81 @@ PSPs have been depreciated in v1.25 and their replacement, Pod Security Admissio
 
 ### Network security policies
 
+Kubernetes allows for all pods to reach each other by default. You can, however, still set configuration to isolate and block traffic. Newer versions of Kubernetes also allow egress traffic to be blocked.  To do any of this, you would use a `NetworkPolicy`.  Because all traffic is allowed, it may be best to implement a policy that drops all traffic and then others to allow for specific ingress and egress traffic.
+
+When defining a network policy, you can limit it to a namespace, with a `podSelector`, or by using labels to target the correct pods.  Further definition is for ingress to and egress from IP addresses and ports.
+
+Not all network plugins support the `NetworkPolicy` kind.  Some that do are:
+
+- Calico
+- Romana
+- Cilium
+- Kube-router
+- WeaveNet
+
+Previously, Kubernetes requires namespaces be annotated as part of the network isolation, like so: `net.beta.kubernetes.io/network-policy= value`.  While this is no longer required, some plugins may still need it.
+
+Here is an example of a network policy definition.  The policy only affects the default namespace and pods with a `role=db` label.  Ingress and egress settings are both defined.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-egress-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16
+        except:
+        - 172.17.1.0/24
+    - namespaceSelector:
+        matchLabels:
+          project: myproject
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+```
+
+Using empty ingress or egress rules will block traffic for the affected pods. It is not recommended you do this, but instead us a separate network policy. Some network policy recipes for different scenarios can be found [here on Github](https://github.com/ahmetb/kubernetes-network-policy-recipes).
+
+
+### Default network policy
+
+Below is an example of a network policy that does not allow ingress traffic to all pods not already matched to another policy (the `{}` does this).  All egress traffic is still allowed by this policy.
+
+```yaml
+apiVersion: networking.k8s.io
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+```
+
+As policies can grow quite complex, it is often a good idea that write multiple smaller and simpler policies rather than one large complex policy.
+
+
+## Lab Exercises
+
+### Lab 15.1 - Working with TLS
+

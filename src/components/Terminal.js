@@ -13,7 +13,8 @@ export function Terminal(props) {
 //   [
 //     {
 //       text: "kubectl create -f ingress.yaml",
-//       dir: "" // * OPTIONAL
+//       dir: "",   // * OPTIONAL
+//       host: ""   // * OPTIONAL
 //     },
 // 
 //   ]
@@ -53,16 +54,16 @@ function HeaderBar() {
 
 function CodeLine(props) {
   let dir = props.dir ? props.dir : "~";
-  let node = props.node ? props.node : "cp";
+  let host = props.host ? props.host : "cp";
 
   return (
-    <p style={{ margin: "0px", padding: "2px" }}>{`ubuntu@${node}:${dir} $ ${props.text}`}</p>
+    <p style={{ margin: "0px", padding: "2px" }}>{`ubuntu@${host}:${dir} $ ${props.text}`}</p>
   );
 }
 
 function TerminalText(props) {
   console.log(props.lines);
-  let lines = props.lines.map((line) => <CodeLine text={line.text} dir={line.dir} />);
+  let lines = props.lines.map((line) => <CodeLine text={line.text} dir={line.dir} host={line.host} />);
 
   return (
     <div
