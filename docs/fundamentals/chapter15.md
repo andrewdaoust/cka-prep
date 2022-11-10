@@ -283,3 +283,137 @@ As policies can grow quite complex, it is often a good idea that write multiple 
 
 ### Lab 15.1 - Working with TLS
 
+First look at the kubelet on both the cp and worker nodes.
+
+<Terminal lines={
+  [
+    {
+      text: "systemctl status kubelet.service",
+      host: "cp"
+    }
+  ]
+} />
+
+<Terminal lines={
+  [
+    {
+      text: "systemctl status kubelet.service",
+      host: "worker"
+    }
+  ]
+} />
+
+Under the output for the cgroups, find where the configuration file can be found. It will likely be under `/var/lib/kubelet/config.yaml`.
+
+Now take a look at the configuration file.
+
+<Terminal lines={
+  [
+    {
+      text: "sudo cat /var/lib/kubelet/config.yaml",
+    }
+  ]
+} />
+
+In the output, near the end of the file, you should see a `staticPodPath` which shows where the kube-apiserver would look for pod spec.  Take a look at this directory. and some of the files within it. In the kube-controller-manager spec, notice that you can see the files referenced for the certs being used.
+
+<Terminal lines={
+  [
+    {
+      text: "sudo ls /etc/kubernetes/manifests",
+    },
+    {
+      text: "sudo cat /etc/kubernetes/manifests/kube-controller-manager.yaml",
+    },
+    {
+      text: "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml",
+    }
+  ]
+} />
+
+The token for authorization are kept as secrets. Look at the secrets within the `kube-system` namespace as well as one of the secrets themselves.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl -n kube-system get secrets",
+    },
+    {
+      text: "kubectl -n kube-system get secrets certificate-controller-token-<unique id> -o yaml",
+    },
+  ]
+} />
+
+You can use the `kubectl config` command to view and update parameters in the configuration of the cluster.  This can help prevent mistakes that accidentally remove access to the cluster. Keys and certs used are redacted from the config viewing. View some of the options for setting new credentials.
+
+<Terminal lines={
+  [
+    {
+      text: "kubectl config view",
+    },
+    {
+      text: "kubectl config set-credentials --help",
+    },
+  ]
+} />
+
+Make a copy of the configuration file so that we can modify it later.
+
+<Terminal lines={
+  [
+    {
+      text: "cp $HOME/.kube/config $HOME/cluster-api-config",
+    },
+  ]
+} />
+
+### Lab 15.2 - Authentication and authorization
+
+```yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: developer
+  namespace: development
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["deployments", "replicasets", "pods"]
+  verbs: ["list", "get", "watch", "create", "update", "patch", "delete"]
+```
+
+
+```yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: developer-role-binding
+  namespace: development
+subjects:
+- kind: User
+  name: DevDan
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: ""
+```
+
+
+### Lab 15.3 - Admission controllers
+
+View the existing admission controller settings.
+
+<Terminal lines={
+  [
+    {
+      text: "sudo grep admission /etc/kubernetes/manifests/kube-apiserver.yaml",
+    },
+  ]
+} />
+
+
+## Knowledge check
+
+- __Authentication__, __authorization__, and __admission control__ are all part of accessing the Kubernetes API
+- The __kube-apiserver__ accepts and `--authorization-control` option to change the operation tool in use
+- You __can__ specify egress rules in network policies
